@@ -1,0 +1,171 @@
+# Wheelchair profile, stripped down walking profile
+# Walking-Hiking-Mountain/Alpine Hiking profile TEMPLATE
+# 20/6/2015 v1.7.6 RELEASE * Modified and simplified route preferencing
+# See bottom for Changelog and verbose comments.
+# Walking, acccepting as maximum SAC T1 - Hiking
+---context:global
+
+assign   consider_elevation       1    # 0 as default, otherwise less interesting flat roads are chosen.
+assign   shortest_way             0    # 0 as default, duplicate shortest standard profile, SAC access limit ignored for now
+
+assign   iswet                    0    # 0 as default, 1 tries to prevent muddy boots and wet buttocks
+
+assign   hiking_routes_preference  0.10    # 0.10 as default
+# Increases cost of non hiking routes by factor 1 + hiking_routes_preference
+
+
+#orientation/decision penalties, not used for preferred hiking routes
+assign   turncost_value           0 # not used now
+assign   initialcost_value        0 # not used now
+
+#less frequently changed flags
+assign   allow_steps              0  # 1 as default
+assign   allow_ferries            1  # 1 as default
+assign   cost_of_unknown          2  # 2 as default
+#
+assign   elevationpenaltybuffer 5    # 5 as default
+assign   elevationmaxbuffer     10   # 10 as default
+assign   elevationbufferreduce  0.0  # 0.0 as default
+
+# as initial point, considered flat speed 4 km/h, climbing speed 600 m /h
+assign   uphillcostvalue	  7
+assign   uphillcutoffvalue	  3
+assign   downhillcutoffvalue  3
+assign   downhillcostvalue    7
+
+#internal parameters
+assign downhillcost switch     consider_elevation      downhillcostvalue 0
+assign downhillcutoff	switch consider_elevation      downhillcutoffvalue 0
+assign uphillcost   switch     consider_elevation      uphillcostvalue  0
+assign uphillcutoff switch     consider_elevation      uphillcutoffvalue 0
+
+assign   nonhiking_route_penalty    add 1.0 max 0.0 hiking_routes_preference
+
+assign   validForFoot        1
+
+
+---context:way   # following code refers to way-tags
+
+assign ispaved or surface=paved or surface=asphalt or surface=concrete surface=paving_stones
+assign isunpaved not or surface= or ispaved or surface=fine_gravel surface=cobblestone
+
+assign any_hiking_route or route=hiking         or route_hiking_iwn=yes
+						or route_hiking_nwn=yes	or route_hiking_rwn=yes
+						or route_hiking_lwn=yes or route_hiking_=yes
+                        or route_foot_=yes      or route_foot_nwn=yes
+						or route_foot_rwn=yes      route_foot_lwn=yes      
+                        
+assign any_cycleroute =
+     if      route_bicycle_icn=yes then true
+     else if route_bicycle_ncn=yes then true
+     else if route_bicycle_rcn=yes then true
+     else if route_bicycle_lcn=yes then true
+     else false                        
+                       
+assign is_ldhr 	and any_hiking_route not equal 0.0 hiking_routes_preference
+assign nodeaccessgranted 	any_hiking_route
+               
+assign istrack highway=track|road|path|footway
+assign ismainroad highway=motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|unclassified
+		   
+                       
+assign issidewalk sidewalk=left|right|both|yes
+
+assign turncost   0
+
+assign initialcost 
+   switch route=ferry 10000  0
+   
+assign defaultaccess    switch access=    not motorroad=yes    switch or access=private access=no   0   1
+
+assign bikeaccess
+       or any_cycleroute
+          switch bicycle=
+                 switch vehicle=
+                        defaultaccess
+                        switch or vehicle=private vehicle=no
+                               0
+                               1
+                 not or bicycle=private or bicycle=no bicycle=dismount
+
+assign footaccess     or any_hiking_route 
+                      or issidewalk 
+                      or and bikeaccess  not foot=no
+                      or bicycle=dismount
+                      switch foot=      defaultaccess    not foot=private|no
+                         
+assign accesspenalty switch footaccess 0 switch bikeaccess 4 100000
+
+
+assign costfactor 
+  
+  add      accesspenalty
+  (
+  if    ( and highway= not route=ferry )  then 100000 
+  else if    highway=steps then ( switch allow_steps   ( switch consider_elevation 1.0 3.0 )     100000 )
+  else  if    route=ferry    then ( if allow_ferries then 2.34 else 100000 )
+  
+# iswet=1 in global context section means wet weather, increases penalty for eventually inconvenient ways
+# ismuddy boolean relates in wet weather to unpaved or unclassified surface, that can have mud or get slicky in wet weather.
+
+  else if    highway=pedestrian       then ( switch ispaved 1.0 5.0 )
+  else if    highway=bridleway        then ( 10 )
+  else if    highway=cycleway         then ( switch ispaved 1.2 5.0 )
+  else if    highway=residential|living_street    
+                                     then  ( switch  issidewalk 1.0 switch ispaved 1.2 5.0 )
+  else if    highway=service         then  ( switch issidewalk 1.0 switch ispaved 1.2 5.0 )
+  
+  else if    istrack                 then  ( switch ispaved 1.0 switch tracktype=grade1 1.5 5.0   	)
+
+  else if highway=motorway|motorway_link  then  100000
+  else if highway=proposed|abandoned|construction then 100000
+  
+  else if highway=trunk|trunk_link  			then switch issidewalk 2.0 20 
+  else if highway=primary|primary_link    		then switch issidewalk 2.0 10  	
+  else if highway=secondary|secondary_link		then switch issidewalk 1.5 4.0
+  else if highway=tertiary|tertiary_link		then switch issidewalk 1.2 2.5 
+  else if highway=unclassified 					then switch issidewalk 1.1 1.5 
+  
+  else 5
+  )
+  
+
+ 
+---context:node  # following code refers to node tags
+
+assign defaultaccess
+       switch access=
+              1 # add default barrier restrictions here!
+              switch or access=private access=no
+                     0
+                     1
+
+assign bikeaccess
+       or nodeaccessgranted=yes
+          switch bicycle=
+                 switch vehicle=
+                        defaultaccess
+                        switch or vehicle=private vehicle=no
+                               0
+                               1
+                 switch or bicycle=private or bicycle=no bicycle=dismount
+                        0
+                        1
+
+assign footaccess
+       or bicycle=dismount
+          switch foot=
+                 defaultaccess
+                 switch or foot=private foot=no
+                        0
+                        1
+
+assign initialcost switch footaccess 0 switch bikeaccess 3 1000000
+
+# changelog:
+# Feature is / + added / - removed / * changed / ! fixed
+
+# Hiking Version 1.6 ALFA
+# 20/6/2015 v1.7.6 RELEASE * Modified and simplified route preferencing
+# 28/11/2015 v1.0 Stripped dow version for wheelchair profile
+
