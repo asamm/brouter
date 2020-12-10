@@ -158,14 +158,59 @@ public class PosUnifier extends MapCreatorBase
     System.out.println( "*** WARNING: cannot unify position for: " + n.ilon + " " + n.ilat );
   }
 
+  /*
+    ilon, ilat are produced like this: see btools.mapcreator.NodeData
+    ilat = (int)( ( lat + 90. )*1000000. + 0.5);
+    ilon = (int)( ( lon + 180. )*1000000. + 0.5);
+  */
+
+  public double doublelon(int ilon){
+    return (ilon / 1000000.0) - 180.0;
+  }
+
+  public double doublelat(int ilat){
+    return (ilat / 1000000.0) - 90.0;
+  }
+
+  public int lonIndexHgt(int ilon){
+    return indexHgt(doublelon(ilon), 180.0);
+  }
+
+  public int latIndexHgt(int ilat){
+    return indexHgt(doublelat(ilat), 90.0);
+  }
+
+  public int indexHgt(double coord, double bound){
+    if (coord >= bound) coord = bound - .000001;
+    if (coord < -bound) coord = -bound + .000001;
+    // adjust for south and west hemispheres
+    if(coord < 0.0 && coord% 1.0 != 0.0) coord -= 1.0;
+    return (int) coord;
+  }
+
   /**
-   * get the srtm data set for a position srtm coords are
-   * srtm_<srtmLon>_<srtmLat> where srtmLon = 180 + lon, srtmLat = 60 - lat
+   * @param srtmLonIdx west bound
+   * @param srtmLatIdx south bound
+   * @return name of the tile in ".hgt" convention, no suffix
    */
-  private SrtmRaster srtmForNode( int ilon, int ilat ) throws Exception
+  public String hgtFileName(int srtmLonIdx, int srtmLatIdx){
+    String hemiLon = srtmLonIdx >= 0 ? "E": "W";
+    String hemilat = srtmLatIdx >= 0 ? "N": "S";
+    String lonS = "00" + Math.abs(srtmLonIdx);
+    String latS = "0" + Math.abs(srtmLatIdx);
+    return hemilat + latS.substring(latS.length() - 2) + hemiLon + lonS.substring(lonS.length() -3);
+  }
+
+  // integration tests
+  public void setSrtmdir(String dir){
+    this.srtmdir = dir;
+  }
+
+  public SrtmRaster srtmForNode( int ilon, int ilat ) throws Exception
   {
-    int srtmLonIdx = ( ilon + 5000000 ) / 5000000;
-    int srtmLatIdx = ( 654999999 - ilat ) / 5000000 - 100; // ugly negative rounding...
+
+    int srtmLonIdx = lonIndexHgt(ilon);
+    int srtmLatIdx = latIndexHgt(ilat);
 
     if ( srtmLonIdx == lastSrtmLonIdx && srtmLatIdx == lastSrtmLatIdx )
     {
@@ -174,9 +219,11 @@ public class PosUnifier extends MapCreatorBase
     lastSrtmLonIdx = srtmLonIdx;
     lastSrtmLatIdx = srtmLatIdx;
 
-    String slonidx = "0" + srtmLonIdx;
-    String slatidx = "0" + srtmLatIdx;
-    String filename = "srtm_" + slonidx.substring( slonidx.length()-2 ) + "_" + slatidx.substring( slatidx.length()-2 );
+    /*
+    filename represents: .zip archive named by the convention of .hgt files, containing arbitrarily named .asc file
+    and any number of associated files, e.g. N48E012.zip contains N48E012.asc, N48E012.prj, N48E012.asc.aux.xml
+    */
+    String filename = hgtFileName(srtmLonIdx, srtmLatIdx);
 
     lastSrtmRaster = srtmmap.get( filename );
     if ( lastSrtmRaster == null && !srtmmap.containsKey( filename ) )
@@ -218,11 +265,11 @@ public class PosUnifier extends MapCreatorBase
     return lastSrtmRaster;
   }
 
-  private void resetSrtm()
+  public void resetSrtm()
   {
     srtmmap = new HashMap<String, SrtmRaster>();
-    lastSrtmLonIdx = -1;
-    lastSrtmLatIdx = -1;
+    lastSrtmLonIdx = -9999;
+    lastSrtmLatIdx = -9999;
     lastSrtmRaster = null;
   }
 
