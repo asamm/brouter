@@ -33,7 +33,7 @@ assign avoid_unpaved          0 # %avoid_unpaved% Avoid unpaved| Unpaved ways ar
                                 # default 0 / 1=avoid unpaved roads, equivalent to road_restriction=2, implemented for Locus config switches
 
 assign road_restriction       1 # default 1 ( 4 and above is 1pass only for fast suboptimal calculation )
-assign turnInstructionMode  = 1 # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style / 1 does not work for Brouter-web
+assign turnInstructionMode  = 2 # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style / 1 does not work for Brouter-web
 
 assign consider_smoothness         0 # 1=consider smoothness=* tag
 

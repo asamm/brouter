@@ -23,7 +23,7 @@ assign bikerPower = 125    # %bikerPower% | Dauerleistung in Watt, für Fahrtzei
 assign ignore_bicycle_no = false # %ignore_bicycle_no% | für Regionen mit falschen bicyle=no tags können sie mit "true" ignoriert werden. Auch Shuttletransporte (bicycle=dismount + foot=no) werden geroutet | boolean
 
 
-assign turnInstructionMode          = 1     # %turnInstructionMode% | Modus für die Abbiegehinweise | [0=keine, 1=automatische Wahl, 2=locus-Style, 3=osmand-Style, 4=comment-Style, 5=gpsies-Style, 6=orux-Style]
+assign turnInstructionMode          = 2     # %turnInstructionMode% | Modus für die Abbiegehinweise | [0=keine, 1=automatische Wahl, 2=locus-Style, 3=osmand-Style, 4=comment-Style, 5=gpsies-Style, 6=orux-Style]
 assign turnInstructionCatchingRange 20 # innerhalb dieser Strecke werden mehrere Abiegehinweise zu einem zusammengefasst und die Abiegewinkel werden besser an die generelle Richtung angenähert
 assign turnInstructionRoundabouts true # mit "false" werden keine speziellen Abiegehinweise für den Kreisverkehr generiert 
 

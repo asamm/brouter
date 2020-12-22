@@ -13,7 +13,7 @@
 assign   consider_elevation       1    # 0 as default, otherwise less interesting flat roads are chosen.
 assign   shortest_way             0    # 0 as default, duplicate shortest standard profile, SAC access limit ignored for now
 
-assign   turnInstructionMode  =   1       # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style
+assign   turnInstructionMode  =   2       # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style
 assign   turnInstructionCatchingRange  20 # V1.8.5 / default=40, but foot paths may be more distingushed, especially in cities.
 
 assign   iswet                     0       # %is_wet% 0 as default, 1 tries to prevent muddy boots and wet buttocks
