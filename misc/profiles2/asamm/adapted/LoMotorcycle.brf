@@ -22,13 +22,13 @@ assign avoid_unpaved       = false  # %avoid_unpaved% | Avoid unpaved roads, if 
 assign avoid_motorways     = false  # %avoid_motorways% | Avoid motorways | boolean
 
 # Kinematic model parameters
-assign vmax             = 75     # %vmax% | Target speed (in km/h) | number
-assign recup_efficiency = 0.7    # %recup_efficiency% | (ratio) | number
-assign totalweight      = 1640   # %totalweight% | Total weight of the car (in kg) | number
-assign f_roll           = 232    # %f_roll% | Rolling friction (in Newton) | number
-assign f_air            = 0.4    # %f_air% | Drag force (in Newton / (m/s)^2), 0.5*cw*A*rho | number
-assign f_recup          = 400    # %f_recup% | Newton | number
-assign p_standby        = 250    # %p_standby% | Watt | number
+assign vmax             = 80     # %vmax% | Target speed (in km/h) | number
+assign recup_efficiency = 0.1    # %recup_efficiency% | (ratio) | number
+assign totalweight      = 280    # %totalweight% | Total weight of the car (in kg) | number
+assign f_roll           = 100    # %f_roll% | Rolling friction (in Newton) | number
+assign f_air            = 0.7    # %f_air% | Drag force (in Newton / (m/s)^2), 0.5*cw*A*rho | number
+assign f_recup          = 40     # %f_recup% | Newton | number
+assign p_standby        = 200    # %p_standby% | Watt | number
 
 # Turn instructions settings
 assign turnInstructionMode          = 2     # %turnInstructionMode% | Mode for the generated turn instructions | [0=none, 1=auto-choose, 2=locus-style, 3=osmand-style, 4=comment-style, 5=gpsies-style, 6=orux-style]
