@@ -22,7 +22,7 @@ assign avoid_unpaved       = false  # %avoid_unpaved% | Avoid unpaved roads, if 
 assign avoid_motorways     = false  # %avoid_motorways% | Avoid motorways | boolean
 
 # Kinematic model parameters
-assign vmax             = 75     # %vmax% | Target speed (in km/h) | number
+assign vmax             = 130     # %vmax% | Target speed (in km/h) | number
 assign recup_efficiency = 0.7    # %recup_efficiency% | (ratio) | number
 assign totalweight      = 1640   # %totalweight% | Total weight of the car (in kg) | number
 assign f_roll           = 232    # %f_roll% | Rolling friction (in Newton) | number
