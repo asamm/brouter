@@ -191,7 +191,7 @@ assign costfactor
 
   switch and highway= not route=ferry  10000
   switch or highway=proposed highway=construction 10000
-  switch highway=abandoned 30
+  switch highway=abandoned 40
 
   min 9999
   add max onewaypenalty accesspenalty

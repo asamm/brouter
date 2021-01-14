@@ -18,7 +18,7 @@
 
 # bstart /global
 ---context:global
-assign   iswet                  0 # 0 as default, *) flag for weather conditions
+assign   iswet                  0 # %is_wet% 0 as default, *) flag for weather conditions
 assign   turnInstructionMode  = 2 # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style
 assign   cycleroutes_pref       0.2 # also CRP *)  costfactor penalty for not being cycleroute
 assign   MTB_factor             2.0 # default 0.0, *)
@@ -444,6 +444,7 @@ assign rawcostfactor ( # can be <1, adjusted to >=1 in final step of calculation
   switch    route=ferry    switch allow_ferries 5.67 10000
   switch    highway=construction                     10000
   switch    highway=proposed                         10000
+  switch    highway=abandoned                        8
   
   add highwayclass_basefactor   add not_isbike_penalty   add unsafe_penalty   max penaltymax   nonpath_penalty
  )  

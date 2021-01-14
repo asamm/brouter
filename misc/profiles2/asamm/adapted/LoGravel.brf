@@ -442,8 +442,9 @@ assign rawcostfactor ( # can be <1, adjusted to >=1 in final step of calculation
   
   switch    highway=steps  switch allow_steps     40 10000
   switch    route=ferry    switch allow_ferries 5.67 10000
-  switch    highway=construction                     1000
+  switch    highway=construction                     10000
   switch    highway=proposed                         10000
+  switch    highway=abandoned                        10
   
   add highwayclass_basefactor   add not_isbike_penalty   add unsafe_penalty   max penaltymax   nonpath_penalty
  )  
