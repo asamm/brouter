@@ -190,7 +190,8 @@ assign isresidentialorliving = or highway=residential|living_street living_stree
 assign costfactor
 
   switch and highway= not route=ferry  10000
-  switch or highway=proposed highway=abandoned 10000
+  switch or highway=proposed highway=construction 10000
+  switch highway=abandoned 30
 
   min 9999
   add max onewaypenalty accesspenalty

@@ -18,7 +18,7 @@ assign validForCars        = true
 
 # Use the following switches to change behaviour
 assign avoid_toll          = false  # %avoid_toll% | Avoid paid roads | boolean
-assign avoid_unpaved       = false  # %avoid_unpaved% | Avoid unpaved roads, if possible | boolean
+assign avoid_unpaved       = true  # %avoid_unpaved% | Avoid unpaved roads, if possible | boolean
 assign avoid_motorways     = false  # %avoid_motorways% | Avoid motorways | boolean
 
 # Kinematic model parameters
@@ -66,6 +66,9 @@ assign caraccess
                                    switch route=ferry                       1
                                    switch isresidentialorliving             1
                                    switch highway=service                   1
+                                   switch highway=proposed                  0
+                                   switch highway=construction              0
+                                   switch highway=abandoned                 0
                                    0
                                    access=yes|permissive|designated|destination
                             vehicle=yes|designated|destination

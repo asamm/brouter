@@ -4,28 +4,30 @@
 # *)  = See also https://github.com/poutnikl/Brouter-profiles/wiki 
 # **) = See also https://github.com/poutnikl/Trekking-Poutnik/wiki
 #
-# Trekking profile with medium focus on unpaved roads, moderately penalizing mainroads.
+# Trekking in Hilly paths mode, Very strong preference of unpaved hilly paths
 #
 # Legend above is the placeholder for generated comments of final profiles
 # See the HistoryLog.txt file for file history, the wikis above for verbose comments.
+
 #
-################################################################
-# Asamm routing: profile adapted from 'Trekking-MTB-medium.brf'
+#################################################################
+# Asamm routing: profile adapted from 'Trekking-hilly-paths.brf'
 # 1.2021
-################################################################
+#################################################################
 #
+
 # bstart /global
 ---context:global
-assign   iswet                  0 # %is_wet% 0 as default, *) flag for weather conditions
+assign   iswet                  0 # 0 as default, *) flag for weather conditions
 assign   turnInstructionMode  = 2 # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style
 assign   cycleroutes_pref       0.2 # also CRP *)  costfactor penalty for not being cycleroute
-assign   MTB_factor             0.5 # default 0.0, *)
-assign   smallpaved_factor      0.0 # default 0.0, *)
+assign   MTB_factor             2.0 # default 0.0, *)
+assign   smallpaved_factor      -1.0 # default 0.0, *)
 assign   avoid_unsafe           0 # 0 as default, gives penalty to mainroad without bike friendly status.
 assign   hills                  1 # 1=default / 0=BRouter default/ 1=+ penalty for uphills >3.0%/ 2=velomobile-like avoiding slopes, 3= simulates ascend/length time equiv.
                                   # 4=valley mode, 5=No-Flats mode
-assign   isbike_for_mainroads   true # default=true / if false then bike friendly tag hints for mainroads are ignored, keeping their high penalties. v2.5.20
-assign   path_preference        0.0 # 0.0 as default, try 20.0 to penalize nonpath ways a/o paved ways
+assign   isbike_for_mainroads   false # default=true / if false then bike friendly tag hints for mainroads are ignored, keeping their high penalties. v2.5.20
+assign   path_preference        20.0 # 0.0 as default, try 20.0 to penalize nonpath ways a/o paved ways
 
 assign   consider_elevation     1 # 1 as default
 assign   consider_smoothness    1 # 1 as default
@@ -441,6 +443,7 @@ assign rawcostfactor ( # can be <1, adjusted to >=1 in final step of calculation
   switch    highway=steps  switch allow_steps     40 10000
   switch    route=ferry    switch allow_ferries 5.67 10000
   switch    highway=construction                     10000
+  switch    highway=proposed                         10000
   
   add highwayclass_basefactor   add not_isbike_penalty   add unsafe_penalty   max penaltymax   nonpath_penalty
  )  
