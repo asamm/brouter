@@ -18,16 +18,16 @@ assign validForCars        = true
 
 # Use the following switches to change behaviour
 assign avoid_toll          = false  # %avoid_toll% | Avoid paid roads | boolean
-assign avoid_unpaved       = true  # %avoid_unpaved% | Avoid unpaved roads, if possible | boolean
+assign avoid_unpaved       = true   # %avoid_unpaved% | Avoid unpaved roads, if possible | boolean
 assign avoid_motorways     = false  # %avoid_motorways% | Avoid motorways | boolean
 
 # Kinematic model parameters
-assign vmax             = 130     # %vmax% | Target speed (in km/h) | number
+assign vmax             = 130    # %vmax% | Target speed (in km/h) | number
 assign recup_efficiency = 0.7    # %recup_efficiency% | (ratio) | number
 assign totalweight      = 1640   # %totalweight% | Total weight of the car (in kg) | number
 assign f_roll           = 232    # %f_roll% | Rolling friction (in Newton) | number
 assign f_air            = 0.4    # %f_air% | Drag force (in Newton / (m/s)^2), 0.5*cw*A*rho | number
-assign f_recup          = 400    # %f_recup% | Newton | number
+assign f_recup          = 40     # %f_recup% | Newton | number
 assign p_standby        = 250    # %p_standby% | Watt | number
 
 # Turn instructions settings
@@ -35,7 +35,6 @@ assign turnInstructionMode          = 2     # %turnInstructionMode% | Mode for t
 
 # Technical parameters
 assign pass1coefficient    = 1.3
-
 
 ---context:way   # following code refers to way-tags
 
@@ -45,7 +44,6 @@ assign classifier_ferry       = 2
 
 assign is_avoided_toll_road and  avoid_toll toll=yes
 assign is_avoided_motorway and avoid_motorways highway=motorway|motorway_link
-
 
 #
 # calculate logical car access
@@ -91,39 +89,38 @@ assign initialclassifier =
      if route=ferry then classifier_ferry
      else classifier_none
 
-
 #
 # calculate the initial cost
 # this is added to the total cost each time the costfactor
 # changed
 #
 assign initialcost =
-     if      ( equal initialclassifier classifier_ferry       ) then 10000
+     if      ( equal initialclassifier classifier_ferry ) then 10000
      else 0
 
-assign accessspeedlimit = if caraccess then 999 else 0
+assign accessspeedlimit = if caraccess then 130 else 0
 
 assign isbadoneway = if reversedirection=yes then ( if oneway= then junction=roundabout else oneway=yes|true|1 ) else oneway=-1
-assign onewayspeedlimit = if isbadoneway then 0 else 999
+assign onewayspeedlimit = if isbadoneway then 0 else 130
 
 assign islinktype = highway=motorway_link|trunk_link|primary_link|secondary_link|tertiary_link
 
 assign maxspeed_surface =
-  switch or surface= surface=paved|asphalt|concrete 999
+  switch or surface= surface=paved|asphalt|concrete 130
   switch surface=paving_stones|cobblestone|sett 30
   switch surface=fine_gravel ( switch avoid_unpaved 3 10 )
   switch avoid_unpaved 1 2
 
 assign maxspeed_tracktype =
-  switch tracktype= 999
+  switch tracktype= 130
   switch tracktype=grade1 40
   switch tracktype=grade2 ( switch avoid_unpaved 2 5 )
   1
 
 assign maxspeed_implicit =
-  switch highway=motorway                  999
+  switch highway=motorway                  130
   switch highway=motorway_link             130
-  switch highway=trunk                     250
+  switch highway=trunk                     130
   switch highway=trunk_link                100
   switch highway=primary|primary_link      100
   switch highway=secondary|secondary_link   90
@@ -152,7 +149,7 @@ assign maxspeed_forward =
   switch maxspeed:forward=130 130
   switch maxspeed:forward=urban 50
   switch maxspeed:forward=rural 100
-  999
+  130
 
 assign maxspeed_backward =
   switch maxspeed:backward=50 50
@@ -170,7 +167,7 @@ assign maxspeed_backward =
   switch maxspeed:backward=130 130
   switch maxspeed:backward=urban 50
   switch maxspeed:backward=rural 100
-  999
+  130
 
 assign maxspeed_explicit =
   switch maxspeed=50 50
@@ -276,4 +273,4 @@ assign maxspeed =
          switch greater way:priorityclassifier 20 1
          0
        else if railway=level_crossing then 0
-       else 999
+       else 130
