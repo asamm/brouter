@@ -23,7 +23,7 @@ assign   turnInstructionMode  =   2       # 0=none, 1=auto-choose, 2=locus-style
 assign   turnInstructionCatchingRange  20 # V1.8.5 / default=40, but foot paths may be more distingushed, especially in cities.
 
 assign   iswet                     0       # %is_wet% 0 as default, 1 tries to prevent muddy boots and wet buttocks
-assign   hiking_routes_preference  0.20    # 0.10 as default, Increases cost of non hiking routes by multiplier 1 + hiking_routes_preference
+assign   hiking_routes_preference  0.60    # 0.10 as default, Increases cost of non hiking routes by multiplier 1 + hiking_routes_preference
 
 assign   Offroad_factor           0.0 # default 0.0, see ****), see also https://github.com/poutnikl/Brouter-profiles/wiki/Trekking-MTB-Profiles---legend
 
@@ -108,21 +108,24 @@ assign  SAC_K2_6    add ( multiply ( add SAC_K2_5 1.0 ) SAC_K20 ) -1.0
 
 ---context:way   # following code refers to way-tags
 
-assign ispaved or surface=paved or surface=asphalt or surface=concrete surface=paving_stones
-assign isunpaved not or surface= or ispaved or surface=fine_gravel surface=cobblestone
-
-assign any_hiking_route or route=hiking             or route_hiking_iwn=yes
-                        or route_hiking_nwn=yes     or route_hiking_rwn=yes
-                        or route_hiking_lwn=yes     or route_hiking_=yes
-                        or route_foot_=yes          or route_foot_nwn=yes
-                        or route_foot_rwn=yes       route_foot_lwn=yes      
+assign ispaved  or surface=paved or surface=asphalt or surface=concrete surface=paving_stones
+ 
+assign isunpaved  not or surface= or ispaved or surface=fine_gravel surface=cobblestone
+ 
+assign any_hiking_route 
+            or route=hiking
+            or route_hiking_iwn=yes  or route_hiking_nwn=yes
+            or route_hiking_rwn=yes  or route_hiking_lwn=yes
+            or route_hiking_=yes or route_foot_=yes
+            or route_foot_nwn=yes or route_foot_rwn=yes route_foot_lwn=yes      
                         
 assign any_cycleroute =
      if      route_bicycle_icn=yes then true
      else if route_bicycle_ncn=yes then true
      else if route_bicycle_rcn=yes then true
      else if route_bicycle_lcn=yes then true
-     else false                        
+     else if route=bicycle then true
+     else false                    
                        
 assign is_ldhr                  and any_hiking_route not equal 0.0 hiking_routes_preference
 assign nodeaccessgranted        any_hiking_route
