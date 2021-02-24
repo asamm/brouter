@@ -1,7 +1,7 @@
 # Walking-Hiking-Mountain/Alpine Hiking profile TEMPLATE
 # 18/5/2016  v1.8.7   ! Fixed down/uphillcostfactors for shortest_way - to be really shortest
 #
-# SAC T1 - hiking - Trail well cleared, 	Area flat or slightly sloped, no fall hazard, Strong Hiking Route Preference
+# SAC T1 - hiking - Trail well cleared, 	Area flat or slightly sloped, no fall hazard, Hiking Route Preference
 #
 # Legend above is placeholder for generated comments of final profile
 # See the profile bottom for changelogs and verbose *) comments
@@ -23,7 +23,7 @@ assign   turnInstructionMode  =   2       # 0=none, 1=auto-choose, 2=locus-style
 assign   turnInstructionCatchingRange  20 # V1.8.5 / default=40, but foot paths may be more distingushed, especially in cities.
 
 assign   iswet                     0       # %is_wet% 0 as default, 1 tries to prevent muddy boots and wet buttocks
-assign   hiking_routes_preference  0.60    # 0.10 as default, Increases cost of non hiking routes by multiplier 1 + hiking_routes_preference
+assign   hiking_routes_preference  0.8    # 0.10 as default, Increases cost of non hiking routes by multiplier 1 + hiking_routes_preference
 
 assign   Offroad_factor           0.0 # default 0.0, see ****), see also https://github.com/poutnikl/Brouter-profiles/wiki/Trekking-MTB-Profiles---legend
 
