@@ -291,9 +291,8 @@ assign rawcostfactor # can be <1.0, is treated later
   else if    istrack                 then 
        ( add 1.0 add tracktype_penalty add surface_penalty      add wet_penalty        SAC_scale_penalty      )
 
-  else if highway=motorway|motorway_link|proposed  then  100000
+  else if highway=motorway|motorway_link|proposed|construction  then  100000
   else if highway=abandoned then (  switch ismuddy 10  switch iswet 6 4 )
-  else if highway=construction then (  switch ismuddy 30  switch iswet 18 12 )
   
   else if highway=trunk|trunk_link    then 
       ( switch iswet ( switch issidewalk 1.5 10 )    ( switch issidewalk 2.0 20 ) )
