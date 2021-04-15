@@ -122,18 +122,18 @@ assign maxspeed_tracktype =
 
 assign maxspeed_implicit =
   switch highway=motorway                  130
-  switch highway=motorway_link             130
+  switch highway=motorway_link             100
   switch highway=trunk                     130
   switch highway=trunk_link                100
   switch highway=primary|primary_link      100
   switch highway=secondary|secondary_link   90
   switch highway=tertiary|tertiary_link     80
-  switch highway=unclassified               50
+  switch highway=unclassified               60
   switch route=ferry                        10
   switch highway=bridleway                  10
   switch isresidentialorliving              30
   switch highway=service                    10
-  switch highway=track|road|path switch tracktype=grade1 10 20
+  switch highway=track|road|path switch tracktype=grade1 10 10
   0
 
 assign maxspeed_forward =

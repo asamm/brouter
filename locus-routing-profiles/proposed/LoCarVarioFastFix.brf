@@ -22,11 +22,11 @@ assign avoid_unpaved       = true   # %avoid_unpaved% | Avoid unpaved roads, if 
 assign avoid_motorways     = false  # %avoid_motorways% | Avoid motorways | boolean
 
 # Kinematic model parameters
-assign vmax             = 130     # %vmax% | Target speed (in km/h) | number
+assign vmax             = 130    # %vmax% | Target speed (in km/h) | number
 assign recup_efficiency = 0.7    # %recup_efficiency% | (ratio) | number
-assign totalweight      = 1640   # %totalweight% | Total weight of the car (in kg) | number
-assign f_roll           = 232    # %f_roll% | Rolling friction (in Newton) | number
-assign f_air            = 0.4    # %f_air% | Drag force (in Newton / (m/s)^2), 0.5*cw*A*rho | number
+assign totalweight      = 1400   # %totalweight% | Total weight of the car (in kg) | number
+assign f_roll           = 200    # %f_roll% | Rolling friction (in Newton) | number
+assign f_air            = 0.35   # %f_air% | Drag force (in Newton / (m/s)^2), 0.5*cw*A*rho | number
 assign f_recup          = 400    # %f_recup% | Newton | number
 assign p_standby        = 250    # %p_standby% | Watt | number
 
@@ -122,18 +122,18 @@ assign maxspeed_tracktype =
 
 assign maxspeed_implicit =
   switch highway=motorway                  130
-  switch highway=motorway_link             130
+  switch highway=motorway_link             100
   switch highway=trunk                     130
   switch highway=trunk_link                100
   switch highway=primary|primary_link      100
   switch highway=secondary|secondary_link   90
   switch highway=tertiary|tertiary_link     80
-  switch highway=unclassified               50
+  switch highway=unclassified               60
   switch route=ferry                        10
   switch highway=bridleway                  10
   switch isresidentialorliving              30
   switch highway=service                    10
-  switch highway=track|road|path switch tracktype=grade1 10 20
+  switch highway=track|road|path switch tracktype=grade1 10 10
   0
 
 assign maxspeed_forward =
