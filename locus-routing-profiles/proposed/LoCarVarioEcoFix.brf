@@ -133,7 +133,7 @@ assign maxspeed_implicit =
   switch highway=bridleway                  10
   switch isresidentialorliving              30
   switch highway=service                    10
-  switch highway=track|road|path switch tracktype=grade1 10 10
+  switch highway=track|road|path switch tracktype=grade1 10 switch tracktype=grade2 5 2
   0
 
 assign maxspeed_forward =
