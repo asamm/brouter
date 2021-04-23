@@ -82,6 +82,7 @@ public class RouteServer extends Thread implements Comparable<RouteServer>
             String getline = null;
             String agent = null;
             String encodings = null;
+            String xff = null; // X-Forwarded-For
 
             // more headers until first empty line
             for(;;)
@@ -102,13 +103,18 @@ public class RouteServer extends Thread implements Comparable<RouteServer>
               {
                 getline = line;
               }
-              if ( line.startsWith( "User-Agent: " ) )
+              line = line.toLowerCase();
+              if ( line.startsWith( "user-agent: " ) )
               {
-                agent = line.substring( "User-Agent: ".length() );
+                agent = line.substring( "user-agent: ".length() );
               }
-              if ( line.startsWith( "Accept-Encoding: " ) )
+              if ( line.startsWith( "accept-encoding: " ) )
               {
-                encodings = line.substring( "Accept-Encoding: ".length() );
+                encodings = line.substring( "accept-encoding: ".length() );
+              }
+              if ( line.startsWith( "x-forwarded-for: " ) )
+              {
+                xff = line.substring( "x-forwarded-for: ".length() );
               }
             }
             
@@ -143,8 +149,18 @@ public class RouteServer extends Thread implements Comparable<RouteServer>
               return;
             }
 
+
             InetAddress ip = clientSocket.getInetAddress();
-            System.out.println( formattedTimestamp() + " ip=" + (ip==null ? "null" : ip.toString() ) + " -> " + getline );
+            String sIp = xff == null ? (ip==null ? "null" : ip.toString() ) : xff;
+            boolean newSession = IpAccessMonitor.touchIpAccess( sIp );
+            String sessionInfo = " new";
+            if ( !newSession )
+            {
+              int sessionCount = IpAccessMonitor.getSessionCount();
+              sessionInfo = "    " + Math.min( sessionCount, 999 );
+              sessionInfo = sessionInfo.substring( sessionInfo.length() - 4 );
+            }
+            System.out.println( formattedTimestamp() + sessionInfo + " ip=" + sIp + " -> " + getline );
 
             String url = getline.split(" ")[1];
             HashMap<String,String> params = getUrlParams(url);
