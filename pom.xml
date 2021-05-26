@@ -18,7 +18,7 @@
     <module>brouter-core</module>
     <module>brouter-map-creator</module>
     <module>brouter-server</module>
-    <module>brouter-routing-app</module>
+    <!--<module>brouter-routing-app</module>-->
   </modules>
 
   <developers>

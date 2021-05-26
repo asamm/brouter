@@ -51,6 +51,7 @@ assign steps_ramp_dh_penalty    = 2                # penalty for downhill steps 
 assign ferry_penalty            = 5000             # penalty for ferries
 assign private_penalty          = 6                # penalty for private ways and nodes
 assign bicycle_no_penalty       = 5                # penalty for ways and nodes with bicycle=no
+assign foot_only_penalty        = 5                # penalty for ways accessible by foot but not by bicycle, e.g. vehicle=no
 assign slippery_muddy_penalty   = if is_wet        # penalty for unpaved roads and tracks, which are tricky to ride when wet
                                     then 2
                                     else 0
@@ -305,9 +306,9 @@ assign bikeaccess =
       )
       else 
       (
-        if not bicycle=private
-        then true
-        else false
+        if bicycle=private|no
+        then false
+        else true
       )
   )
 
@@ -340,8 +341,9 @@ if bikeaccess
   else 
   (
     if ( or  access=private or bicycle=private or vehicle=private foot=private )
-      then                                                    private_penalty # access with penalty for private
-      else                                                    100000          # absolutely no access
+      then private_penalty                                                    # access with penalty for private
+      else if footaccess then foot_only_penalty                               # we should be pushing bike, but access is not prohibited as such 
+      else 10000                                                              # no access at all
   )
 
 #
