@@ -683,6 +683,10 @@ construction;0000000037 driveway
 construction;0000000021 mini_roundabout
 construction;0000000020 turning_loop
 
+piste:type;0000000001 nordic
+piste:type;0000000002 skitour
+
+
  ---context:node
 
 highway;0001314954 bus_stop
