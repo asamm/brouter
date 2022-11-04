@@ -163,7 +163,7 @@ assign footaccess     or any_hiking_route
                       or bicycle=dismount
                       switch foot=      defaultaccess    not foot=private|no
                          
-assign accesspenalty switch footaccess 0 switch bikeaccess 4 100000
+assign accesspenalty switch or access=private access=no 100000 switch footaccess 0 switch bikeaccess 4 100000
 
 assign badoneway = 0
 assign onewaypenalty = 0
@@ -414,7 +414,7 @@ assign footaccess
                         0
                         1
 
-assign initialcost switch or bikeaccess footaccess 0 1000000
+assign initialcost switch or access=private access=no 100000 switch or bikeaccess footaccess 0 1000000
 
 #############################################################################################
 # ****) Offroad_factor ( ported MTB_factor from bicycle Trekking profile
