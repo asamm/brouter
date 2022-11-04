@@ -1,0 +1,1 @@
+Profile all.brf is used in tiles generation as a means of filtering. For nordic skiing ways to be included in tiles, this profile must evaluate their costFactor < 10000. 

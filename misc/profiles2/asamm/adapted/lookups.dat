@@ -686,6 +686,24 @@ construction;0000000020 turning_loop
 piste:type;0000000001 nordic
 piste:type;0000000002 skitour
 
+piste:difficulty;0000000003 novice
+piste:difficulty;0000000003 easy
+piste:difficulty;0000000003 intermediate
+piste:difficulty;0000000003 advanced
+piste:difficulty;0000000003 expert
+piste:difficulty;0000000003 freeride
+piste:difficulty;0000000003 extreme
+
+piste:grooming;0000000004 classic
+piste:grooming;0000000004 classic+skating
+piste:grooming;0000000004 skating
+piste:grooming;0000000004 skating+classic
+piste:grooming;0000000004 scooter
+piste:grooming;0000000004 backcountry
+
+piste:oneway;0000000005 yes
+piste:oneway;0000000005 no
+
 
  ---context:node
 

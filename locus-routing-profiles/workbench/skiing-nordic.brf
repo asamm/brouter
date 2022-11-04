@@ -1,3 +1,4 @@
+
 ---context:global   # following code refers to global config
 
 assign validForBikes = false
@@ -18,10 +19,13 @@ assign uphillcutoff = 1.5
 assign turncost = 0
 assign initialcost = 0
 
-assign costfactor
-  switch piste:type=nordic 1
-  1000
+assign costfactor =
+  if piste:type=nordic then 1.0 
+  else 1000
 
 ---context:node  # following code refers to node tags
 
-assign initialcost 0
+assign defaultaccess = true
+
+assign initialcost = 0 
+
