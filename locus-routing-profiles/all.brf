@@ -15,6 +15,7 @@ assign initialcost 0
 assign costfactor
   switch not highway=     1
   switch not railway=     1
+  switch or piste:type=nordic piste:type=skitour  1
   switch not or waterway= waterway=unknown  1
   switch not route=       1
   100000
