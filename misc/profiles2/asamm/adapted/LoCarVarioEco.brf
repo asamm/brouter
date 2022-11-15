@@ -66,6 +66,7 @@ assign caraccess
                                    switch route=ferry                       1
                                    switch isresidentialorliving             1
                                    switch highway=service                   1
+                                   switch highway=track                     1
                                    switch highway=proposed                  0
                                    switch highway=construction              0
                                    switch highway=abandoned                 0
@@ -133,7 +134,13 @@ assign maxspeed_implicit =
   switch highway=bridleway                  10
   switch isresidentialorliving              30
   switch highway=service                    30
-  switch highway=track|road|path switch tracktype=grade1 30 5
+  switch highway=track|road|path 
+       switch tracktype=grade1 20
+       switch tracktype=grade2 5
+       switch tracktype=grade3 2
+       switch tracktype=grade4 0
+       switch tracktype=grade5 0
+       0
   0
 
 assign maxspeed_forward =
@@ -255,7 +262,7 @@ assign caraccess
               switch motor_vehicle=
                      switch vehicle=
                             switch access=
-                                   not barrier=gate|bollard|lift_gate|cycle_barrier
+                                   not barrier=gate|swing_gate|bollard|lift_gate|cycle_barrier
                                    access=yes|permissive|designated|destination
                             vehicle=yes|permissive|designated|destination
                      motor_vehicle=yes|permissive|designated|destination
