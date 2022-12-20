@@ -480,6 +480,12 @@ route_mtb_rcn;0000013321 yes
 route_mtb_mtb;0000006853 yes
 route_bicycle_mtb;0000002240 yes
 
+route_ski_;0000001111 yes
+route_ski_lwn;0000001112 yes
+route_ski_rwn;0000001112 yes
+route_ski_lcn;0000001112 yes
+route_ski_rcn;0000001112 yes
+
 brouter_route_placeholder_dummy_01;0000000001 dummy
 brouter_route_placeholder_dummy_02;0000000001 dummy
 brouter_route_placeholder_dummy_03;0000000001 dummy
