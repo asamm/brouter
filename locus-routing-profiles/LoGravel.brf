@@ -435,8 +435,7 @@ assign penaltymax = max roughness_penalty max tracktype_surface_penalty max wet_
 
 assign rawcostfactor ( # can be <1, adjusted to >=1 in final step of calculation of costfactor, uphillcostfactor,downhillcostfactor
   switch and highway= not route=ferry  10000 #only highways unless ferry
-  switch highway=motorway 10000
-  switch highway=motorway_link 100
+  switch highway=motorway|motorway_link|proposed|abandoned  10000
   
   # all other exclusions below (access, steps, ferries,..) should not be deleted by the decoder, to be available in voice-hint-processing
   min 9999 
