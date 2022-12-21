@@ -42,6 +42,11 @@ assign initialcost =
 
 assign costfactorByPisteType =
   if piste:type=nordic then 1.0 
+  else if route_ski_=yes then 1.0
+  else if route_ski_lwn=yes then 1.0 # these are projected from relations
+  else if route_ski_rwn=yes then 1.0
+  else if route_ski_lcn=yes then 1.0
+  else if route_ski_rcn=yes then 1.0
   else if piste:type=skitour then 3.0 
   else 10000.0
 
