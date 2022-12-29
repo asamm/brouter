@@ -1,35 +1,39 @@
 package btools.routingapp;
 
+import android.Manifest;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.util.Log;
+import android.view.View;
+import android.widget.Toast;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Method;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import android.app.Activity;
-import android.content.Context;
-import android.content.res.AssetManager;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.os.Environment;
-import android.util.DisplayMetrics;
-import android.view.View;
-import android.widget.Toast;
-import btools.expressions.BExpressionContextWay;
 import btools.expressions.BExpressionMetaData;
 import btools.mapaccess.OsmNode;
 import btools.router.OsmNodeNamed;
@@ -41,12 +45,12 @@ import btools.router.RoutingEngine;
 import btools.router.RoutingHelper;
 import btools.util.CheapRuler;
 
-public class BRouterView extends View
-{
+public class BRouterView extends View {
+
+  private final int memoryClass;
   RoutingEngine cr;
   private int imgw;
   private int imgh;
-
   private int centerLon;
   private int centerLat;
   private double scaleLon;  // ilon -> pixel
@@ -56,343 +60,335 @@ public class BRouterView extends View
   private List<OsmNodeNamed> nogoList;
   private List<OsmNodeNamed> nogoVetoList;
   private OsmTrack rawTrack;
-
-  private String modesDir;
-  private String tracksDir;
-  private String segmentDir;
-  private String profileDir;
-  private String profilePath;
+  private File retryBaseDir;
+  private File modesDir;
+  private File tracksDir;
+  private File segmentDir;
+  private File profileDir;
   private String profileName;
-  private String sourceHint;
   private boolean waitingForSelection = false;
+  private boolean waitingForMigration = false;
   private String rawTrackPath;
-
+  private String oldMigrationPath;
+  private String trackOutfile;
   private boolean needsViaSelection;
   private boolean needsNogoSelection;
   private boolean needsWaypointSelection;
-
-  private WpDatabaseScanner dataBaseScanner;
-
   private long lastDataTime = System.currentTimeMillis();
-
   private CoordinateReader cor;
-
   private int[] imgPixels;
+  private long lastTs = System.currentTimeMillis();
+  private long startTime = 0L;
 
-  private int memoryClass;
-  
-  public boolean canAccessSdCard;
-
-  public void stopRouting()
-  {
-    if ( cr != null ) cr.terminate();
-  }
-
-  public BRouterView( Context context, int memoryClass )
-  {
-    super( context );
+  public BRouterView(Context context, int memoryClass) {
+    super(context);
     this.memoryClass = memoryClass;
   }
 
-  public void init()
-  {
-    try
-    {
-      DisplayMetrics metrics = new DisplayMetrics();
-      ( (Activity) getContext() ).getWindowManager().getDefaultDisplay().getMetrics( metrics );
-      imgw = metrics.widthPixels;
-      imgh = metrics.heightPixels;
+  public void stopRouting() {
+    if (cr != null) cr.terminate();
+  }
 
+  public void init() {
+    try {
       // get base dir from private file
-      String baseDir = ConfigHelper.getBaseDir( getContext() );
+      File baseDir = ConfigHelper.getBaseDir(getContext());
       // check if valid
       boolean bdValid = false;
-      if ( baseDir != null )
-      {
-        File bd = new File( baseDir );
-        bdValid = bd.isDirectory();
-        File brd = new File( bd, "brouter" );
-        if ( brd.isDirectory() )
-        {
-          startSetup( baseDir, false );
+      if (baseDir != null) {
+        bdValid = baseDir.isDirectory();
+        File brd = new File(baseDir, "brouter");
+        if (brd.isDirectory()) {
+          if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q &&
+            !brd.getAbsolutePath().contains("/Android/media/btools.routingapp")) {
+
+            // don't ask twice
+            String version = "v" + getContext().getString(R.string.app_version);
+            File vFile = new File(brd, "profiles2/" + version);
+            if (vFile.exists()) {
+              startSetup(baseDir, false);
+              return;
+            }
+            String message = "(previous basedir " + baseDir + " has to migrate )";
+
+            ((BRouterActivity) getContext()).selectBasedir(((BRouterActivity) getContext()).getStorageDirectories(), message);
+            waitingForSelection = true;
+            waitingForMigration = true;
+            oldMigrationPath = brd.getAbsolutePath();
+          } else {
+            startSetup(baseDir, false);
+          }
           return;
         }
       }
       String message = baseDir == null ? "(no basedir configured previously)" : "(previous basedir " + baseDir
-          + ( bdValid ? " does not contain 'brouter' subfolder)" : " is not valid)" );
+        + (bdValid ? " does not contain 'brouter' subfolder)" : " is not valid)");
 
-      ( (BRouterActivity) getContext() ).selectBasedir( getStorageDirectories(), guessBaseDir(), message );
+      ((BRouterActivity) getContext()).selectBasedir(((BRouterActivity) getContext()).getStorageDirectories(), message);
       waitingForSelection = true;
-    }
-    catch (Exception e)
-    {
+    } catch (Exception e) {
       String msg = e instanceof IllegalArgumentException ? e.getMessage() : e.toString();
 
-      AppLogger.log( msg );
-      AppLogger.log( AppLogger.formatThrowable( e ) );
+      AppLogger.log(msg);
+      AppLogger.log(AppLogger.formatThrowable(e));
 
-      ( (BRouterActivity) getContext() ).showErrorMessage( msg );
+      ((BRouterActivity) getContext()).showErrorMessage(msg);
     }
   }
 
-  public void startSetup( String baseDir, boolean storeBasedir )
-  {
-    cor = null;
-    try
-    {
-      File fbd = new File( baseDir );
-      if ( !fbd.isDirectory() )
-      {
-        throw new IllegalArgumentException( "Base-directory " + baseDir + " is not a directory " );
+  public void startSetup(File baseDir, boolean storeBasedir) {
+    if (baseDir == null) {
+      baseDir = retryBaseDir;
+      retryBaseDir = null;
+    }
+
+    if (storeBasedir) {
+      File td = new File(baseDir, "brouter");
+      try {
+        td.mkdirs();
+      } catch (Exception e) {
+        Log.d("BRouterView", "Error creating base directory: " + e.getMessage());
+        e.printStackTrace();
       }
-      if ( storeBasedir )
-      {
-        // Android 4.4 patch: try extend the basedir if not valid
-        File td = new File( fbd, "brouter" );
-        try
-        {
-          td.mkdir();
+
+      if (!td.isDirectory()) {
+        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED) {
+          retryBaseDir = baseDir;
+          ActivityCompat.requestPermissions((BRouterActivity) getContext(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
+        } else {
+          ((BRouterActivity) getContext()).selectBasedir(((BRouterActivity) getContext()).getStorageDirectories(), "Cannot access " + baseDir.getAbsolutePath() + "; select another");
         }
-        catch (Exception e) {}
-        if ( !td.isDirectory() )
-        {
-          File td1 = new File( fbd, "Android/data/btools/routingapp" );
-          try
-          {
-            td1.mkdirs();
-          }
-          catch (Exception e){}
-          td = new File( td1, "brouter" );
-          try
-          {
-            td.mkdir();
-          }
-          catch (Exception e) {}
-          if ( td.isDirectory() )
-            fbd = td1;
-        }
-
-        ConfigHelper.writeBaseDir( getContext(), baseDir );
+        return;
       }
-      String basedir = fbd.getAbsolutePath();
-      AppLogger.log( "using basedir: " + basedir );
+      ConfigHelper.writeBaseDir(getContext(), baseDir);
+    }
+    try {
+      cor = null;
 
-      String version = "v1.6.1";
+      String basedir = baseDir.getAbsolutePath();
+      AppLogger.log("using basedir: " + basedir);
 
-      // create missing directories
-      assertDirectoryExists( "project directory", basedir + "/brouter", null, null );
-      segmentDir = basedir + "/brouter/segments4";
-      if ( assertDirectoryExists( "data directory", segmentDir, "segments4.zip", null ) )
-      {
-        ConfigMigration.tryMigrateStorageConfig(
-              new File( basedir + "/brouter/segments3/storageconfig.txt" ),
-              new File( basedir + "/brouter/segments4/storageconfig.txt" ) );
-      }
-      profileDir = basedir + "/brouter/profiles2";
-      assertDirectoryExists( "profile directory", profileDir, "profiles2.zip", version );
-      modesDir = basedir + "/brouter/modes";
-      assertDirectoryExists( "modes directory", modesDir, "modes.zip", version );
-      assertDirectoryExists( "readmes directory", basedir + "/brouter/readmes", "readmes.zip", version );
+      populateBasedir(basedir);
 
-      int deviceLevel =  android.os.Build.VERSION.SDK_INT;
-      int targetSdkVersion = getContext().getApplicationInfo().targetSdkVersion;
-      canAccessSdCard =  deviceLevel < 23 || targetSdkVersion == 10;
-      if ( canAccessSdCard )
-      {
-        cor = CoordinateReader.obtainValidReader( basedir, segmentDir );
+      // new init is done move old files
+      if (waitingForMigration) {
+        Log.d("BR", "path " + oldMigrationPath + " " + basedir);
+        if (!oldMigrationPath.equals(basedir + "/brouter"))
+          moveFolders(oldMigrationPath, basedir + "/brouter");
+        waitingForMigration = false;
       }
-      else
-      {
-        cor = new CoordinateReaderNone();
-        cor.readFromTo();
-      }
-      
+
+      cor = CoordinateReader.obtainValidReader(basedir);
+
       wpList = cor.waypoints;
       nogoList = cor.nogopoints;
-      nogoVetoList = new ArrayList<OsmNodeNamed>();
-
-      sourceHint = "(dev/trgt=" + deviceLevel + "/" + targetSdkVersion + " coordinate-source: " + cor.basedir + cor.rootdir + ")";
+      nogoVetoList = new ArrayList<>();
 
       needsViaSelection = wpList.size() > 2;
       needsNogoSelection = nogoList.size() > 0;
       needsWaypointSelection = wpList.size() == 0;
 
-      if ( cor.tracksdir != null )
-      {
-        tracksDir = cor.basedir + cor.tracksdir;
-        assertDirectoryExists( "track directory", tracksDir, null, null );
-
-        // output redirect: look for a pointerfile in tracksdir
-        File tracksDirPointer = new File( tracksDir + "/brouter.redirect" );
-        if ( tracksDirPointer.isFile() )
-        {
-          tracksDir = readSingleLineFile( tracksDirPointer );
-          if ( tracksDir == null )
-            throw new IllegalArgumentException( "redirect pointer file is empty: " + tracksDirPointer );
-          if ( !( new File( tracksDir ).isDirectory() ) )
-            throw new IllegalArgumentException( "redirect pointer file " + tracksDirPointer + " does not point to a directory: " + tracksDir );
-        }
-        else
-        {
-          File writeTest = new File( tracksDir + "/brouter.writetest" );
-          try
-          {
-            writeTest.createNewFile();
-            writeTest.delete();
-          }
-          catch( Exception e )
-          {
-            tracksDir = null;
-          }
-        }
+      if (cor.tracksdir != null) {
+        tracksDir = new File(cor.basedir, cor.tracksdir);
+        assertDirectoryExists("track directory", tracksDir, null, null);
       }
-      if ( tracksDir == null )
-      {
-        tracksDir = basedir + "/brouter"; // fallback
+      if (tracksDir == null) {
+        tracksDir = new File(basedir, "brouter"); // fallback
       }
 
-      String[] fileNames = new File( profileDir ).list();
-      ArrayList<String> profiles = new ArrayList<String>();
+      String[] fileNames = profileDir.list();
+      ArrayList<String> profiles = new ArrayList<>();
 
       boolean lookupsFound = false;
-      for ( String fileName : fileNames )
-      {
-        if ( fileName.endsWith( ".brf" ) )
-        {
-          profiles.add( fileName.substring( 0, fileName.length() - 4 ) );
+      if (fileNames != null) {
+        for (String fileName : fileNames) {
+          if (fileName.endsWith(".brf")) {
+            profiles.add(fileName.substring(0, fileName.length() - 4));
+          }
+          if (fileName.equals("lookups.dat"))
+            lookupsFound = true;
         }
-        if ( fileName.equals( "lookups.dat" ) )
-          lookupsFound = true;
       }
 
       // add a "last timeout" dummy profile
-      File lastTimeoutFile = new File( modesDir + "/timeoutdata.txt" );
+      File lastTimeoutFile = new File(modesDir + "/timeoutdata.txt");
       long lastTimeoutTime = lastTimeoutFile.lastModified();
-      if ( lastTimeoutTime > 0 && System.currentTimeMillis() - lastTimeoutTime < 1800000 )
-      {
-        BufferedReader br = new BufferedReader( new FileReader( lastTimeoutFile ) );
+      if (lastTimeoutTime > 0 && System.currentTimeMillis() - lastTimeoutTime < 1800000) {
+        BufferedReader br = new BufferedReader(new FileReader(lastTimeoutFile));
         String repeatProfile = br.readLine();
         br.close();
-        profiles.add( 0, "<repeat:" + repeatProfile + ">" );
+        profiles.add(0, "<repeat:" + repeatProfile + ">");
       }
 
-      if ( !lookupsFound )
-      {
-        throw new IllegalArgumentException( "The profile-directory " + profileDir + " does not contain the lookups.dat file."
-            + " see brouter.de/brouter for setup instructions." );
+      if (!lookupsFound) {
+        throw new IllegalArgumentException("The profile-directory " + profileDir + " does not contain the lookups.dat file."
+          + " see brouter.de/brouter for setup instructions.");
       }
-      if ( profiles.size() == 0 )
-      {
-        throw new IllegalArgumentException( "The profile-directory " + profileDir + " contains no routing profiles (*.brf)."
-            + " see brouter.de/brouter for setup instructions." );
+      if (profiles.size() == 0) {
+        throw new IllegalArgumentException("The profile-directory " + profileDir + " contains no routing profiles (*.brf)."
+          + " see brouter.de/brouter for setup instructions.");
       }
-      if ( !RoutingHelper.hasDirectoryAnyDatafiles( segmentDir ) )
-      {
-        ( (BRouterActivity) getContext() ).startDownloadManager();
+      if (!RoutingHelper.hasDirectoryAnyDatafiles(segmentDir)) {
+        ((BRouterActivity) getContext()).startDownloadManager();
         waitingForSelection = true;
         return;
       }
-      ( (BRouterActivity) getContext() ).selectProfile( profiles.toArray( new String[0] ) );
-    }
-    catch (Exception e)
-    {
+      ((BRouterActivity) getContext()).selectProfile(profiles.toArray(new String[0]));
+    } catch (Exception e) {
       String msg = e instanceof IllegalArgumentException ? e.getMessage()
-          + ( cor == null ? "" : " (coordinate-source: " + cor.basedir + cor.rootdir + ")" ) : e.toString();
+        + (cor == null ? "" : " (coordinate-source: " + cor.basedir + cor.rootdir + ")") : e.toString();
 
-      AppLogger.log( msg );
-      AppLogger.log( AppLogger.formatThrowable( e ) );
+      AppLogger.log(msg);
+      AppLogger.log(AppLogger.formatThrowable(e));
 
-      ( (BRouterActivity) getContext() ).showErrorMessage( msg + "\n" + AppLogger.formatThrowable( e ) );
+      ((BRouterActivity) getContext()).showErrorMessage(msg + "\n" + AppLogger.formatThrowable(e));
     }
     waitingForSelection = true;
   }
 
+  private void populateBasedir(String basedir) {
+    String version = "v" + getContext().getString(R.string.app_version);
 
-  public boolean hasUpToDateLookups()
-  {
+    // create missing directories
+    assertDirectoryExists("project directory", new File(basedir, "brouter"), null, null);
+    segmentDir = new File(basedir, "/brouter/segments4");
+    if (assertDirectoryExists("data directory", segmentDir, "segments4.zip", null)) {
+      ConfigMigration.tryMigrateStorageConfig(
+        new File(basedir + "/brouter/segments3/storageconfig.txt"),
+        new File(basedir + "/brouter/segments4/storageconfig.txt"));
+    }
+    profileDir = new File(basedir, "brouter/profiles2");
+    assertDirectoryExists("profile directory", profileDir, "profiles2.zip", version);
+    modesDir = new File(basedir, "/brouter/modes");
+    assertDirectoryExists("modes directory", modesDir, "modes.zip", version);
+    assertDirectoryExists("readmes directory", new File(basedir, "brouter/readmes"), "readmes.zip", version);
+
+    File inputDir = new File(basedir, "brouter/import");
+    assertDirectoryExists("input directory", inputDir, null, version);
+  }
+
+  private void moveFolders(String oldMigrationPath, String basedir) {
+    File oldDir = new File(oldMigrationPath);
+    File[] oldFiles = oldDir.listFiles();
+    if (oldFiles != null) {
+      for (File f : oldFiles) {
+        if (f.isDirectory()) {
+          int index = f.getAbsolutePath().lastIndexOf("/");
+          String tmpdir = basedir + f.getAbsolutePath().substring(index);
+          moveFolders(f.getAbsolutePath(), tmpdir);
+        } else {
+          if (!f.getName().startsWith("v1.6")) {
+            moveFile(oldMigrationPath, f.getName(), basedir);
+          }
+        }
+
+      }
+    }
+  }
+
+  private void copyFile(String inputPath, String inputFile, String outputPath) {
+    InputStream in;
+    OutputStream out;
+
+    try {
+      //create output directory if it doesn't exist
+      File dir = new File(outputPath);
+      if (!dir.exists()) {
+        dir.mkdirs();
+      }
+
+      in = new FileInputStream(new File(inputPath, inputFile));
+      out = new FileOutputStream(new File(outputPath, inputFile));
+
+      byte[] buffer = new byte[1024];
+      int read;
+      while ((read = in.read(buffer)) != -1) {
+        out.write(buffer, 0, read);
+      }
+      in.close();
+
+      // write the output file
+      out.flush();
+      out.close();
+
+    } catch (FileNotFoundException fileNotFoundException) {
+      Log.e("tag", fileNotFoundException.getMessage());
+    } catch (Exception e) {
+      Log.e("tag", e.getMessage());
+    }
+  }
+
+  private void moveFile(String inputPath, String inputFile, String outputPath) {
+    copyFile(inputPath, inputFile, outputPath);
+    // delete the original file
+    new File(inputPath, inputFile).delete();
+  }
+
+  public boolean hasUpToDateLookups() {
     BExpressionMetaData meta = new BExpressionMetaData();
-    meta.readMetaData( new File( profileDir, "lookups.dat" ) );
+    meta.readMetaData(new File(profileDir, "lookups.dat"));
     return meta.lookupVersion == 10;
   }
 
-  public void continueProcessing()
-  {
+  public void continueProcessing() {
     waitingForSelection = false;
     invalidate();
   }
 
-  public void updateViaList( Set<String> selectedVias )
-  {
-    ArrayList<OsmNodeNamed> filtered = new ArrayList<OsmNodeNamed>( wpList.size() );
-    for ( OsmNodeNamed n : wpList )
-    {
+  public void updateViaList(Set<String> selectedVias) {
+    ArrayList<OsmNodeNamed> filtered = new ArrayList<>(wpList.size());
+    for (OsmNodeNamed n : wpList) {
       String name = n.name;
-      if ( "from".equals( name ) || "to".equals( name ) || selectedVias.contains( name ) )
-        filtered.add( n );
+      if ("from".equals(name) || "to".equals(name) || selectedVias.contains(name))
+        filtered.add(n);
     }
     wpList = filtered;
   }
 
-  public void updateNogoList( boolean[] enabled )
-  {
-    for ( int i = nogoList.size() - 1; i >= 0; i-- )
-    {
-      if ( !enabled[i] )
-      {
-        nogoVetoList.add( nogoList.get( i ) );
-        nogoList.remove( i );
+  public void updateNogoList(boolean[] enabled) {
+    for (int i = nogoList.size() - 1; i >= 0; i--) {
+      if (enabled[i]) {
+        nogoVetoList.add(nogoList.get(i));
+        nogoList.remove(i);
       }
     }
   }
 
-  public void pickWaypoints()
-  {
+  public void pickWaypoints() {
     String msg = null;
 
-    if ( cor.allpoints == null )
-    {
-      try
-      {
+    if (cor.allpoints == null) {
+      try {
         cor.readAllPoints();
-      }
-      catch (Exception e)
-      {
-        msg = "Error reading waypoints: " + e.toString();
+      } catch (Exception e) {
+        msg = "Error reading waypoints: " + e;
       }
 
       int size = cor.allpoints.size();
-      if ( size < 1 )
+      if (size < 1)
         msg = "coordinate source does not contain any waypoints!";
-      if ( size > 1000 )
+      if (size > 1000)
         msg = "coordinate source contains too much waypoints: " + size + "(please use from/to/via names)";
     }
 
-    if ( msg != null )
-    {
-      ( (BRouterActivity) getContext() ).showErrorMessage( msg );
-    }
-    else
-    {
+    if (msg != null) {
+      ((BRouterActivity) getContext()).showErrorMessage(msg);
+    } else {
       String[] wpts = new String[cor.allpoints.size()];
       int i = 0;
-      for ( OsmNodeNamed wp : cor.allpoints )
+      for (OsmNodeNamed wp : cor.allpoints)
         wpts[i++] = wp.name;
-      ( (BRouterActivity) getContext() ).selectWaypoint( wpts );
+      ((BRouterActivity) getContext()).selectWaypoint(wpts);
     }
   }
 
-  public void updateWaypointList( String waypoint )
-  {
-    for( OsmNodeNamed wp : cor.allpoints )
-    {
-      if ( wp.name.equals( waypoint ) )
-      {
-        if ( wp.ilat != 0 || wp.ilat != 0 )
-        {
+  public void updateWaypointList(String waypoint) {
+    for (OsmNodeNamed wp : cor.allpoints) {
+      if (wp.name.equals(waypoint)) {
+        if (wp.ilat != 0 || wp.ilon != 0) {
           int nwp = wpList.size();
-          if ( nwp == 0 || wpList.get( nwp-1 ) != wp )
-          {
-            wpList.add( wp );
+          if (nwp == 0 || wpList.get(nwp - 1) != wp) {
+            wpList.add(wp);
           }
         }
         return;
@@ -400,103 +396,73 @@ public class BRouterView extends View
     }
   }
 
-  public void startWpDatabaseScan()
-  {
-    dataBaseScanner = new WpDatabaseScanner();
-    dataBaseScanner.start();
-    invalidate();
-  }
-
-  public void saveMaptoolDir( String dir )
-  {
-    ConfigMigration.saveAdditionalMaptoolDir( segmentDir, dir );
-    ( (BRouterActivity) getContext() ).showResultMessage( "Success", "please restart to use new config", -1 );
-  }
-
-  public void finishWaypointSelection()
-  {
+  public void finishWaypointSelection() {
     needsWaypointSelection = false;
   }
 
-  private List<OsmNodeNamed> readWpList( BufferedReader br, boolean isNogo ) throws Exception
-  {
-    int cnt = Integer.parseInt( br.readLine() );
-    List<OsmNodeNamed> res = new ArrayList<OsmNodeNamed>(cnt);
-    for( int i=0; i<cnt; i++ )
-    {
-      OsmNodeNamed wp = OsmNodeNamed.decodeNogo( br.readLine() );
+  private List<OsmNodeNamed> readWpList(BufferedReader br, boolean isNogo) throws Exception {
+    int cnt = Integer.parseInt(br.readLine());
+    List<OsmNodeNamed> res = new ArrayList<>(cnt);
+    for (int i = 0; i < cnt; i++) {
+      OsmNodeNamed wp = OsmNodeNamed.decodeNogo(br.readLine());
       wp.isNogo = isNogo;
-      res.add( wp );
+      res.add(wp);
     }
     return res;
   }
 
-  public void startProcessing( String profile )
-  {
+  public void startProcessing(String profile) {
     rawTrackPath = null;
-    if ( profile.startsWith( "<repeat" ) )
-    {
+    if (profile.startsWith("<repeat")) {
       needsViaSelection = needsNogoSelection = needsWaypointSelection = false;
-      try
-      {
-        File lastTimeoutFile = new File( modesDir + "/timeoutdata.txt" );
-        BufferedReader br = new BufferedReader( new FileReader( lastTimeoutFile ) );
+      try {
+        File lastTimeoutFile = new File(modesDir + "/timeoutdata.txt");
+        BufferedReader br = new BufferedReader(new FileReader(lastTimeoutFile));
         profile = br.readLine();
         rawTrackPath = br.readLine();
-        wpList = readWpList( br, false );
-        nogoList = readWpList( br, true );
+        wpList = readWpList(br, false);
+        nogoList = readWpList(br, true);
         br.close();
+      } catch (Exception e) {
+        AppLogger.log(AppLogger.formatThrowable(e));
+        ((BRouterActivity) getContext()).showErrorMessage(e.toString());
       }
-      catch( Exception e )
-      {
-        AppLogger.log( AppLogger.formatThrowable( e ) );
-        ( (BRouterActivity) getContext() ).showErrorMessage( e.toString() );
-      }
-    }
-    else if ( "remote".equals( profileName ) )
-    {
+    } else if ("remote".equals(profileName)) {
       rawTrackPath = modesDir + "/remote_rawtrack.dat";
     }
 
-    profilePath = profileDir + "/" + profile + ".brf";
+    String profilePath = profileDir + "/" + profile + ".brf";
     profileName = profile;
 
-    if ( needsViaSelection )
-    {
+    if (needsViaSelection) {
       needsViaSelection = false;
       String[] availableVias = new String[wpList.size() - 2];
-      for ( int viaidx = 0; viaidx < wpList.size() - 2; viaidx++ )
-        availableVias[viaidx] = wpList.get( viaidx + 1 ).name;
-      ( (BRouterActivity) getContext() ).selectVias( availableVias );
+      for (int viaidx = 0; viaidx < wpList.size() - 2; viaidx++)
+        availableVias[viaidx] = wpList.get(viaidx + 1).name;
+      ((BRouterActivity) getContext()).selectVias(availableVias);
       return;
     }
 
-    if ( needsNogoSelection )
-    {
+    if (needsNogoSelection) {
       needsNogoSelection = false;
-      ( (BRouterActivity) getContext() ).selectNogos( nogoList );
+      ((BRouterActivity) getContext()).selectNogos(nogoList);
       return;
     }
 
-    if ( needsWaypointSelection )
-    {
-      String msg;
-      if ( wpList.size() == 0 )
-      {
-        msg = "Expecting waypoint selection\n" + sourceHint;
+    if (needsWaypointSelection) {
+      StringBuilder msg;
+      if (wpList.size() == 0) {
+        msg = new StringBuilder("Expecting waypoint selection\n" + "(coordinate-source: " + cor.basedir + cor.rootdir + ")");
+      } else {
+        msg = new StringBuilder("current waypoint selection:\n");
+        for (int i = 0; i < wpList.size(); i++)
+          msg.append(i > 0 ? "->" : "").append(wpList.get(i).name);
       }
-      else
-      {
-        msg = "current waypoint selection:\n";
-        for ( int i = 0; i < wpList.size(); i++ )
-          msg += ( i > 0 ? "->" : "" ) + wpList.get( i ).name;
-      }
-      ( (BRouterActivity) getContext() ).showResultMessage( "Select Action", msg, cor instanceof CoordinateReaderNone ? -2 : wpList.size() );
+      ((BRouterActivity) getContext()).showResultMessage("Select Action", msg.toString(), wpList.size());
       return;
     }
 
-    try
-    {
+    try {
       waitingForSelection = false;
 
       RoutingContext rc = new RoutingContext();
@@ -511,46 +477,41 @@ public class BRouterView extends View
       int minlat = Integer.MAX_VALUE;
 
       OsmNode prev = null;
-      for ( OsmNode n : wpList )
-      {
-        maxlon = n.ilon > maxlon ? n.ilon : maxlon;
-        minlon = n.ilon < minlon ? n.ilon : minlon;
-        maxlat = n.ilat > maxlat ? n.ilat : maxlat;
-        minlat = n.ilat < minlat ? n.ilat : minlat;
-        if ( prev != null )
-        {
-          plain_distance += n.calcDistance( prev );
+      for (OsmNode n : wpList) {
+        maxlon = Math.max(n.ilon, maxlon);
+        minlon = Math.min(n.ilon, minlon);
+        maxlat = Math.max(n.ilat, maxlat);
+        minlat = Math.min(n.ilat, minlat);
+        if (prev != null) {
+          plain_distance += n.calcDistance(prev);
         }
         prev = n;
       }
-      toast( "Plain distance = " + plain_distance / 1000. + " km" );
+      toast("Plain distance = " + plain_distance / 1000. + " km");
 
-      centerLon = ( maxlon + minlon ) / 2;
-      centerLat = ( maxlat + minlat ) / 2;
+      centerLon = (maxlon + minlon) / 2;
+      centerLat = (maxlat + minlat) / 2;
 
-      double[] lonlat2m = CheapRuler.getLonLatToMeterScales( centerLat );
+      double[] lonlat2m = CheapRuler.getLonLatToMeterScales(centerLat);
       double dlon2m = lonlat2m[0];
       double dlat2m = lonlat2m[1];
-      double difflon = (maxlon - minlon)*dlon2m;
-      double difflat = (maxlat - minlat)*dlat2m;
+      double difflon = (maxlon - minlon) * dlon2m;
+      double difflat = (maxlat - minlat) * dlat2m;
 
-      scaleLon = imgw / ( difflon * 1.5 );
-      scaleLat = imgh / ( difflat * 1.5 );
-      scaleMeter2Pixel = scaleLon < scaleLat ? scaleLon : scaleLat;
-      scaleLon = scaleMeter2Pixel*dlon2m;
-      scaleLat = scaleMeter2Pixel*dlat2m;
+      scaleLon = imgw / (difflon * 1.5);
+      scaleLat = imgh / (difflat * 1.5);
+      scaleMeter2Pixel = Math.min(scaleLon, scaleLat);
+      scaleLon = scaleMeter2Pixel * dlon2m;
+      scaleLat = scaleMeter2Pixel * dlat2m;
 
       startTime = System.currentTimeMillis();
-      RoutingContext.prepareNogoPoints( nogoList );
+      RoutingContext.prepareNogoPoints(nogoList);
       rc.nogopoints = nogoList;
 
       rc.memoryclass = memoryClass;
-      if ( memoryClass < 16 )
-      {
+      if (memoryClass < 16) {
         rc.memoryclass = 16;
-      }
-      else if ( memoryClass > 256 )
-      {
+      } else if (memoryClass > 256) {
         rc.memoryclass = 256;
       }
 
@@ -558,144 +519,124 @@ public class BRouterView extends View
       // for profile remote, use ref-track logic same as service interface
       rc.rawTrackPath = rawTrackPath;
 
-      cr = new RoutingEngine( tracksDir + "/brouter", null, segmentDir, wpList, rc );
+      cr = new RoutingEngine(tracksDir.getAbsolutePath() + "/brouter", null, segmentDir, wpList, rc);
       cr.start();
       invalidate();
 
-    }
-    catch (Exception e)
-    {
+    } catch (Exception e) {
       String msg = e instanceof IllegalArgumentException ? e.getMessage() : e.toString();
-      toast( msg );
+      toast(msg);
     }
   }
 
-  private boolean assertDirectoryExists( String message, String path, String assetZip, String versionTag )
-  {
-    File f = new File( path );
-
-    boolean exists = f.exists();
-    if ( !exists )
-    {
-      f.mkdirs();
+  private boolean assertDirectoryExists(String message, File path, String assetZip, String versionTag) {
+    boolean exists = path.exists();
+    if (!exists) {
+      path.mkdirs();
     }
-    if ( versionTag != null )
-    {
-      File vtag = new File( f, versionTag );
-      try
-      {
+    if (versionTag != null) {
+      File vtag = new File(path, versionTag);
+      try {
         exists = !vtag.createNewFile();
-      }
-      catch( IOException io ) { } // well..
+      } catch (IOException ignored) {
+      } // well..
     }
 
-    if ( !exists )
-    {
+    if (!exists) {
       // default contents from assets archive
-      if ( assetZip != null )
-      {
-        try
-        {
+      if (assetZip != null) {
+        try {
           AssetManager assetManager = getContext().getAssets();
-          InputStream is = assetManager.open( assetZip );
-          ZipInputStream zis = new ZipInputStream( is );
+          InputStream is = assetManager.open(assetZip);
+          ZipInputStream zis = new ZipInputStream(is);
           byte[] data = new byte[1024];
-          for ( ;; )
-          {
+          for (; ; ) {
             ZipEntry ze = zis.getNextEntry();
-            if ( ze == null )
+            if (ze == null)
               break;
-            String name = ze.getName();
-            File outfile = new File( f, name );
-            outfile.getParentFile().mkdirs();
-            FileOutputStream fos = new FileOutputStream( outfile );
-
-            for ( ;; )
-            {
-              int len = zis.read( data, 0, 1024 );
-              if ( len < 0 )
-                break;
-              fos.write( data, 0, len );
+            if (ze.isDirectory()) {
+              continue;
             }
-            fos.close();
+            String name = ze.getName();
+            File outfile = new File(path, name);
+            if (!outfile.exists() && outfile.getParentFile() != null) {
+              outfile.getParentFile().mkdirs();
+              FileOutputStream fos = new FileOutputStream(outfile);
+
+              for (; ; ) {
+                int len = zis.read(data, 0, 1024);
+                if (len < 0)
+                  break;
+                fos.write(data, 0, len);
+              }
+              fos.close();
+            }
           }
           is.close();
           return true;
-        }
-        catch (IOException io)
-        {
-          throw new RuntimeException( "error expanding " + assetZip + ": " + io );
+        } catch (IOException io) {
+          throw new RuntimeException("error expanding " + assetZip + ": " + io);
         }
 
       }
     }
-    if ( !f.exists() || !f.isDirectory() )
-      throw new IllegalArgumentException( message + ": " + path + " cannot be created" );
+    if (!path.exists() || !path.isDirectory())
+      throw new IllegalArgumentException(message + ": " + path + " cannot be created");
     return false;
   }
 
-  private void paintPosition( int ilon, int ilat, int color, int with )
-  {
+  private void paintPosition(int ilon, int ilat, int color, int with) {
     int lon = ilon - centerLon;
     int lat = ilat - centerLat;
-    int x = imgw / 2 + (int) ( scaleLon * lon );
-    int y = imgh / 2 - (int) ( scaleLat * lat );
-    for ( int nx = x - with; nx <= x + with; nx++ )
-      for ( int ny = y - with; ny <= y + with; ny++ )
-      {
-        if ( nx >= 0 && nx < imgw && ny >= 0 && ny < imgh )
-        {
+    int x = imgw / 2 + (int) (scaleLon * lon);
+    int y = imgh / 2 - (int) (scaleLat * lat);
+    for (int nx = x - with; nx <= x + with; nx++)
+      for (int ny = y - with; ny <= y + with; ny++) {
+        if (nx >= 0 && nx < imgw && ny >= 0 && ny < imgh) {
           imgPixels[nx + imgw * ny] = color;
         }
       }
   }
 
-  private void paintCircle( Canvas canvas, OsmNodeNamed n, int color, int minradius )
-  {
+  private void paintCircle(Canvas canvas, OsmNodeNamed n, int color, int minradius) {
     int lon = n.ilon - centerLon;
     int lat = n.ilat - centerLat;
-    int x = imgw / 2 + (int) ( scaleLon * lon );
-    int y = imgh / 2 - (int) ( scaleLat * lat );
+    int x = imgw / 2 + (int) (scaleLon * lon);
+    int y = imgh / 2 - (int) (scaleLat * lat);
 
-    int ir = (int) ( n.radius * scaleMeter2Pixel );
-    if ( ir > minradius )
-    {
+    int ir = (int) (n.radius * scaleMeter2Pixel);
+    if (ir > minradius) {
       Paint paint = new Paint();
-      paint.setColor( Color.RED );
-      paint.setStyle( Paint.Style.STROKE );
-      canvas.drawCircle( (float) x, (float) y, (float) ir, paint );
+      paint.setColor(color);
+      paint.setStyle(Paint.Style.STROKE);
+      canvas.drawCircle((float) x, (float) y, (float) ir, paint);
     }
   }
 
-  private void paintLine( Canvas canvas, final int ilon0, final int ilat0, final int ilon1, final int ilat1, final Paint paint )
-  {
+  private void paintLine(Canvas canvas, final int ilon0, final int ilat0, final int ilon1, final int ilat1, final Paint paint) {
     final int lon0 = ilon0 - centerLon;
     final int lat0 = ilat0 - centerLat;
     final int lon1 = ilon1 - centerLon;
     final int lat1 = ilat1 - centerLat;
-    final int x0 = imgw / 2 + (int) ( scaleLon * lon0 );
-    final int y0 = imgh / 2 - (int) ( scaleLat * lat0 );
-    final int x1 = imgw / 2 + (int) ( scaleLon * lon1 );
-    final int y1 = imgh / 2 - (int) ( scaleLat * lat1 );
-    canvas.drawLine( (float) x0, (float) y0,  (float) x1,  (float) y1, paint );
+    final int x0 = imgw / 2 + (int) (scaleLon * lon0);
+    final int y0 = imgh / 2 - (int) (scaleLat * lat0);
+    final int x1 = imgw / 2 + (int) (scaleLon * lon1);
+    final int y1 = imgh / 2 - (int) (scaleLat * lat1);
+    canvas.drawLine((float) x0, (float) y0, (float) x1, (float) y1, paint);
   }
 
-  private void paintPolygon( Canvas canvas, OsmNogoPolygon p, int minradius )
-  {
-    final int ir = (int) ( p.radius * scaleMeter2Pixel );
-    if ( ir > minradius )
-    {
+  private void paintPolygon(Canvas canvas, OsmNogoPolygon p, int minradius) {
+    final int ir = (int) (p.radius * scaleMeter2Pixel);
+    if (ir > minradius) {
       Paint paint = new Paint();
-      paint.setColor( Color.RED );
-      paint.setStyle( Paint.Style.STROKE );
+      paint.setColor(Color.RED);
+      paint.setStyle(Paint.Style.STROKE);
 
-      Point p0 = p.isClosed ? p.points.get(p.points.size()-1) : null;
+      Point p0 = p.isClosed ? p.points.get(p.points.size() - 1) : null;
 
-      for ( final Point p1 : p.points )
-      {
-        if (p0 != null)
-        {
-          paintLine( canvas, p0.x, p0.y, p1.x, p1.y, paint );
+      for (final Point p1 : p.points) {
+        if (p0 != null) {
+          paintLine(canvas, p0.x, p0.y, p1.x, p1.y, paint);
         }
         p0 = p1;
       }
@@ -703,99 +644,36 @@ public class BRouterView extends View
   }
 
   @Override
-  protected void onSizeChanged( int w, int h, int oldw, int oldh )
-  {
+  protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+    imgw = w;
+    imgh = h;
   }
 
-  private void toast( String msg )
-  {
-    Toast.makeText( getContext(), msg, Toast.LENGTH_LONG ).show();
+  private void toast(String msg) {
+    Toast.makeText(getContext(), msg, Toast.LENGTH_LONG).show();
     lastDataTime += 4000; // give time for the toast before exiting
   }
 
-  private long lastTs = System.currentTimeMillis();
-  private long startTime = 0L;
-
   @Override
-  protected void onDraw( Canvas canvas )
-  {
-    try
-    {
-      _onDraw( canvas );
-    }
-    catch (Throwable t)
-    {
+  protected void onDraw(Canvas canvas) {
+    try {
+      _onDraw(canvas);
+    } catch (Throwable t) {
       // on out of mem, try to stop the show
-      if ( cr != null )
+      if (cr != null)
         cr.cleanOnOOM();
       cr = null;
-      try
-      {
-        Thread.sleep( 2000 );
+      try {
+        Thread.sleep(2000);
+      } catch (InterruptedException ignored) {
       }
-      catch (InterruptedException ie)
-      {
-      }
-      ( (BRouterActivity) getContext() ).showErrorMessage( t.toString() );
+      ((BRouterActivity) getContext()).showErrorMessage(t.toString());
       waitingForSelection = true;
     }
   }
 
-  private void showDatabaseScanning( Canvas canvas )
-  {
-    try
-    {
-      Thread.sleep( 100 );
-    }
-    catch (InterruptedException ie)
-    {
-    }
-    Paint paint1 = new Paint();
-    paint1.setColor( Color.WHITE );
-    paint1.setTextSize( 20 );
-
-    Paint paint2 = new Paint();
-    paint2.setColor( Color.WHITE );
-    paint2.setTextSize( 10 );
-
-    String currentDir = dataBaseScanner.getCurrentDir();
-    String bestGuess = dataBaseScanner.getBestGuess();
-
-    if ( currentDir == null ) // scan finished
-    {
-      if ( bestGuess.length() == 0 )
-      {
-        ( (BRouterActivity) getContext() ).showErrorMessage( "scan did not find any possible waypoint database" );
-      }
-      else
-      {
-        ( (BRouterActivity) getContext() ).showWpDatabaseScanSuccess( bestGuess);
-      }
-      cr = null;
-      dataBaseScanner = null;
-      waitingForSelection = true;
-      return;
-    }
-
-    canvas.drawText( "Scanning:", 10, 30, paint1 );
-    canvas.drawText( currentDir, 0, 60, paint2 );
-    canvas.drawText( "Best Guess:", 10, 90, paint1 );
-    canvas.drawText( bestGuess, 0, 120, paint2 );
-    canvas.drawText( "Last Error:", 10, 150, paint1 );
-    canvas.drawText( dataBaseScanner.getLastError(), 0, 180, paint2 );
-
-    invalidate();
-  }
-
-  private void _onDraw( Canvas canvas )
-  {
-    if ( dataBaseScanner != null )
-    {
-      showDatabaseScanning( canvas );
-      return;
-    }
-
-    if ( waitingForSelection )
+  private void _onDraw(Canvas canvas) {
+    if (waitingForSelection)
       return;
 
     long currentTs = System.currentTimeMillis();
@@ -804,343 +682,185 @@ public class BRouterView extends View
     while (sleeptime < 200)
       sleeptime += 500;
 
-    try
-    {
-      Thread.sleep( sleeptime );
-    }
-    catch (InterruptedException ie)
-    {
+    try {
+      Thread.sleep(sleeptime);
+    } catch (InterruptedException ignored) {
     }
     lastTs = System.currentTimeMillis();
 
-    if ( cr == null || cr.isFinished() )
-    {
-      if ( cr != null )
-      {
-        if ( cr.getErrorMessage() != null )
-        {
-          ( (BRouterActivity) getContext() ).showErrorMessage( cr.getErrorMessage() );
-          cr = null;
-          waitingForSelection = true;
-          return;
-        }
-        else
-        {
-          String memstat =  memoryClass + "mb pathPeak " + ((cr.getPathPeak()+500)/1000) + "k";
-          String result = "version = BRouter-1.6.1\n" + "mem = " + memstat + "\ndistance = " + cr.getDistance() / 1000. + " km\n" + "filtered ascend = " + cr.getAscend()
-              + " m\n" + "plain ascend = " + cr.getPlainAscend() + " m\n" + "estimated time = " + cr.getTime();
+    if (cr == null || cr.isFinished()) {
+      if (cr != null) {
+        if (cr.getErrorMessage() != null) {
+          ((BRouterActivity) getContext()).showErrorMessage(cr.getErrorMessage());
+        } else {
+          String memstat = memoryClass + "mb pathPeak " + ((cr.getPathPeak() + 500) / 1000) + "k";
+          String result = "version = BRouter-" + getContext().getString(R.string.app_version) + "\n" + "mem = " + memstat + "\ndistance = " + cr.getDistance() / 1000. + " km\n" + "filtered ascend = " + cr.getAscend()
+            + " m\n" + "plain ascend = " + cr.getPlainAscend() + " m\n" + "estimated time = " + cr.getTime();
 
           rawTrack = cr.getFoundRawTrack();
 
           // for profile "remote", always persist referencetrack
-          if ( cr.getAlternativeIndex() == 0 && rawTrackPath != null )
-          {
-            writeRawTrackToPath( rawTrackPath );
+          if (cr.getAlternativeIndex() == 0 && rawTrackPath != null) {
+            writeRawTrackToPath(rawTrackPath);
           }
 
           String title = "Success";
-          if ( cr.getAlternativeIndex() > 0 )
+          if (cr.getAlternativeIndex() > 0)
             title += " / " + cr.getAlternativeIndex() + ". Alternative";
 
-          ( (BRouterActivity) getContext() ).showResultMessage( title, result, rawTrackPath == null ? -1 : -3 );
-          cr = null;
-          waitingForSelection = true;
-          return;
+          ((BRouterActivity) getContext()).showResultMessage(title, result, rawTrackPath == null ? -1 : -3);
+          trackOutfile = cr.getOutfile();
         }
+        cr = null;
+        waitingForSelection = true;
+        return;
+      } else if (System.currentTimeMillis() > lastDataTime) {
+        System.exit(0);
       }
-      else if ( System.currentTimeMillis() > lastDataTime )
-      {
-        System.exit( 0 );
-      }
-    }
-    else
-    {
+    } else {
       lastDataTime = System.currentTimeMillis();
       imgPixels = new int[imgw * imgh];
 
       int[] openSet = cr.getOpenSet();
-      for ( int si = 0; si < openSet.length; si += 2 )
-      {
-        paintPosition( openSet[si], openSet[si + 1], 0xffffff, 1 );
+      for (int si = 0; si < openSet.length; si += 2) {
+        paintPosition(openSet[si], openSet[si + 1], 0xffffff, 1);
       }
       // paint nogos on top (red)
-      for ( int ngi = 0; ngi < nogoList.size(); ngi++ )
-      {
-        OsmNodeNamed n = nogoList.get( ngi );
+      int minradius = 4;
+      for (int ngi = 0; ngi < nogoList.size(); ngi++) {
+        OsmNodeNamed n = nogoList.get(ngi);
         int color = 0xff0000;
-        paintPosition( n.ilon, n.ilat, color, 4 );
+        paintPosition(n.ilon, n.ilat, color, minradius);
       }
 
       // paint start/end/vias on top (yellow/green/blue)
-      for ( int wpi = 0; wpi < wpList.size(); wpi++ )
-      {
-        OsmNodeNamed n = wpList.get( wpi );
+      for (int wpi = 0; wpi < wpList.size(); wpi++) {
+        OsmNodeNamed n = wpList.get(wpi);
         int color = wpi == 0 ? 0xffff00 : wpi < wpList.size() - 1 ? 0xff : 0xff00;
-        paintPosition( n.ilon, n.ilat, color, 4 );
+        paintPosition(n.ilon, n.ilat, color, minradius);
       }
 
-      canvas.drawBitmap( imgPixels, 0, imgw, (float) 0., (float) 0., imgw, imgh, false, null );
+      canvas.drawBitmap(imgPixels, 0, imgw, (float) 0., (float) 0., imgw, imgh, false, null);
 
       // nogo circles if any
-      for ( int ngi = 0; ngi < nogoList.size(); ngi++ )
-      {
-        OsmNodeNamed n = nogoList.get( ngi );
-        if (n instanceof OsmNogoPolygon)
-        {
-          paintPolygon( canvas, (OsmNogoPolygon)n, 4 );
-        }
-        else
-        {
-          int color = 0xff0000;
-          paintCircle( canvas, n, color, 4 );
+      for (int ngi = 0; ngi < nogoList.size(); ngi++) {
+        OsmNodeNamed n = nogoList.get(ngi);
+        if (n instanceof OsmNogoPolygon) {
+          paintPolygon(canvas, (OsmNogoPolygon) n, minradius);
+        } else {
+          int color = Color.RED;
+          paintCircle(canvas, n, color, minradius);
         }
       }
 
       Paint paint = new Paint();
-      paint.setColor( Color.WHITE );
-      paint.setTextSize( 20 );
+      paint.setColor(Color.WHITE);
+      paint.setTextSize(20);
 
       long mseconds = System.currentTimeMillis() - startTime;
       long links = cr.getLinksProcessed();
-      long perS = ( 1000 * links ) / mseconds;
-      String msg = "Links: " + cr.getLinksProcessed() + " in " + ( mseconds / 1000 ) + "s (" + perS + " l/s)";
+      long perS = (1000 * links) / mseconds;
+      String msg = "Links: " + cr.getLinksProcessed() + " in " + (mseconds / 1000) + "s (" + perS + " l/s)";
 
-      canvas.drawText( msg, 10, 25, paint );
+      canvas.drawText(msg, 10, 25, paint);
     }
     // and make sure to redraw asap
     invalidate();
   }
 
-  private String guessBaseDir()
-  {
-    File basedir = Environment.getExternalStorageDirectory();
-    try
-    {
-      File bd2 = new File( basedir, "external_sd" );
-      ArrayList<String> basedirGuesses = new ArrayList<String>();
-      basedirGuesses.add( basedir.getAbsolutePath() );
-
-      if ( bd2.exists() )
-      {
-        basedir = bd2;
-        basedirGuesses.add( basedir.getAbsolutePath() );
-      }
-
-      ArrayList<CoordinateReader> rl = new ArrayList<CoordinateReader>();
-      for ( String bdg : basedirGuesses )
-      {
-        rl.add( new CoordinateReaderOsmAnd( bdg ) );
-        rl.add( new CoordinateReaderLocus( bdg ) );
-        rl.add( new CoordinateReaderOrux( bdg ) );
-      }
-      long tmax = 0;
-      CoordinateReader cor = null;
-      for ( CoordinateReader r : rl )
-      {
-        long t = r.getTimeStamp();
-        if ( t > tmax )
-        {
-          tmax = t;
-          cor = r;
-        }
-      }
-      if ( cor != null )
-      {
-        return cor.basedir;
-      }
-    }
-    catch (Exception e)
-    {
-      System.out.println( "guessBaseDir:" + e );
-    }
-    return basedir.getAbsolutePath();
+  private void writeRawTrackToMode(String mode) {
+    writeRawTrackToPath(modesDir + "/" + mode + "_rawtrack.dat");
   }
 
-  private void writeRawTrackToMode( String mode )
-  {
-    writeRawTrackToPath( modesDir + "/" + mode + "_rawtrack.dat" );
-  }
-
-  private void writeRawTrackToPath( String rawTrackPath )
-  {
-    if ( rawTrack != null )
-    {
-      try
-      {
-        rawTrack.writeBinary( rawTrackPath );
+  private void writeRawTrackToPath(String rawTrackPath) {
+    if (rawTrack != null) {
+      try {
+        rawTrack.writeBinary(rawTrackPath);
+      } catch (Exception ignored) {
       }
-      catch (Exception e)
-      {
-      }
-    }
-    else
-    {
-      new File( rawTrackPath ).delete();
+    } else {
+      new File(rawTrackPath).delete();
     }
   }
 
-  public void startConfigureService()
-  {
+  public void startConfigureService() {
     String[] modes = new String[]
-    { "foot_short", "foot_fast", "bicycle_short", "bicycle_fast", "motorcar_short", "motorcar_fast" };
+      {"foot_short", "foot_fast", "bicycle_short", "bicycle_fast", "motorcar_short", "motorcar_fast"};
     boolean[] modesChecked = new boolean[6];
 
     String msg = "Choose service-modes to configure (" + profileName + " [" + nogoVetoList.size() + "])";
 
-    ( (BRouterActivity) getContext() ).selectRoutingModes( modes, modesChecked, msg );
+    ((BRouterActivity) getContext()).selectRoutingModes(modes, modesChecked, msg);
   }
 
-  public void configureService( String[] routingModes, boolean[] checkedModes )
-  {
+  public void configureService(String[] routingModes, boolean[] checkedModes) {
     // read in current config
-    TreeMap<String, ServiceModeConfig> map = new TreeMap<String, ServiceModeConfig>();
+    TreeMap<String, ServiceModeConfig> map = new TreeMap<>();
     BufferedReader br = null;
     String modesFile = modesDir + "/serviceconfig.dat";
-    try
-    {
-      br = new BufferedReader( new FileReader( modesFile ) );
-      for ( ;; )
-      {
+    try {
+      br = new BufferedReader(new FileReader(modesFile));
+      for (; ; ) {
         String line = br.readLine();
-        if ( line == null )
+        if (line == null)
           break;
-        ServiceModeConfig smc = new ServiceModeConfig( line );
-        map.put( smc.mode, smc );
+        ServiceModeConfig smc = new ServiceModeConfig(line);
+        map.put(smc.mode, smc);
       }
-    }
-    catch (Exception e)
-    {
-    }
-    finally
-    {
-      if ( br != null )
-        try
-        {
+    } catch (Exception ignored) {
+    } finally {
+      if (br != null)
+        try {
           br.close();
-        }
-        catch (Exception ee)
-        {
+        } catch (Exception ignored) {
         }
     }
 
     // replace selected modes
-    for ( int i = 0; i < 6; i++ )
-    {
-      if ( checkedModes[i] )
-      {
-        writeRawTrackToMode( routingModes[i] );
-        ServiceModeConfig smc = new ServiceModeConfig( routingModes[i], profileName );
-        for ( OsmNodeNamed nogo : nogoVetoList )
-        {
-          smc.nogoVetos.add( nogo.ilon + "," + nogo.ilat );
+    for (int i = 0; i < 6; i++) {
+      if (checkedModes[i]) {
+        writeRawTrackToMode(routingModes[i]);
+        ServiceModeConfig smc = new ServiceModeConfig(routingModes[i], profileName);
+        for (OsmNodeNamed nogo : nogoVetoList) {
+          smc.nogoVetos.add(nogo.ilon + "," + nogo.ilat);
         }
-        map.put( smc.mode, smc );
+        map.put(smc.mode, smc);
       }
     }
 
     // no write new config
     BufferedWriter bw = null;
-    StringBuilder msg = new StringBuilder( "Mode mapping is now:\n" );
-    msg.append( "( [..] counts nogo-vetos)\n" );
-    try
-    {
-      bw = new BufferedWriter( new FileWriter( modesFile ) );
-      for ( ServiceModeConfig smc : map.values() )
-      {
-        bw.write( smc.toLine() );
-        bw.write( '\n' );
-        msg.append( smc.toString() ).append( '\n' );
+    StringBuilder msg = new StringBuilder("Mode mapping is now:\n");
+    msg.append("( [");
+    msg.append(nogoVetoList.size() > 0 ? nogoVetoList.size() : "..").append("] counts nogo-vetos)\n");
+    try {
+      bw = new BufferedWriter(new FileWriter(modesFile));
+      for (ServiceModeConfig smc : map.values()) {
+        bw.write(smc.toLine());
+        bw.write('\n');
+        msg.append(smc).append('\n');
       }
-    }
-    catch (Exception e)
-    {
-    }
-    finally
-    {
-      if ( bw != null )
-        try
-        {
+    } catch (Exception ignored) {
+    } finally {
+      if (bw != null)
+        try {
           bw.close();
-        }
-        catch (Exception ee)
-        {
+        } catch (Exception ignored) {
         }
     }
-    ( (BRouterActivity) getContext() ).showModeConfigOverview( msg.toString() );
+    ((BRouterActivity) getContext()).showModeConfigOverview(msg.toString());
   }
 
-  private String readSingleLineFile( File f )
-  {
-    BufferedReader br = null;
-    try
-    {
-      br = new BufferedReader( new InputStreamReader( new FileInputStream( f ) ) );
-      return br.readLine();
-    }
-    catch (Exception e)
-    {
-      return null;
-    }
-    finally
-    {
-      if ( br != null )
-        try
-        {
-          br.close();
-        }
-        catch (Exception ee)
-        {
-        }
-    }
+  public void shareTrack() {
+    File track = new File(trackOutfile);
+    // Copy file to cache to ensure FileProvider allows sharing the file
+    File cacheDir = getContext().getCacheDir();
+    copyFile(track.getParent(), track.getName(), cacheDir.getAbsolutePath());
+    Intent intent = new Intent();
+    intent.setDataAndType(FileProvider.getUriForFile(getContext(), "btools.routing.fileprovider", new File(cacheDir, track.getName())),
+      "application/gpx+xml");
+    intent.setAction(Intent.ACTION_VIEW);
+    intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+    getContext().startActivity(intent);
   }
-
-  private List<String> getStorageDirectories()
-  {
-    ArrayList<String> res = new ArrayList<String>();
-    
-    // check write access on internal sd
-    try
-    {
-      File sd = Environment.getExternalStorageDirectory();
-      File testDir = new File( sd, "brouter" );
-      boolean didExist = testDir.isDirectory();
-      if ( !didExist )
-      {
-        testDir.mkdir();
-      }
-      File testFile = new File( testDir, "test" + System.currentTimeMillis() );
-      testFile.createNewFile();
-      if ( testFile.exists() )
-      {
-        testFile.delete();
-        res.add( sd.getPath() );
-      }
-      if ( !didExist )
-      {
-        testDir.delete();
-      }
-    }
-    catch( Throwable t )
-    {
-      // ignore
-    }
-    
-
-    try
-    {
-      Method method = Context.class.getDeclaredMethod("getExternalFilesDirs", new Class[]{ String.class } );
-      File[] paths = (File[])method.invoke( getContext(), new Object[1] );
-      for( File path : paths )
-      {
-        res.add( path.getPath() );
-      }
-    }
-    catch( Exception e )
-    {
-      res.add( e.toString() );
-      res.add( Environment.getExternalStorageDirectory().getPath() );
-    }
-    return res;
-  }
-
 }

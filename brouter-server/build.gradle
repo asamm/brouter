@@ -1,0 +1,82 @@
+plugins {
+    id 'application'
+}
+
+
+application {
+    mainClass.set('btools.server.BRouter')
+
+    distTar.enabled = false
+
+    jar {
+        manifest {
+            attributes "Main-Class": getMainClass(), "Implementation-Version": project.version
+        }
+    }
+	
+    task fatJar(type: Jar) {
+        archiveFileName = 'brouter-' + project.version + '-all.jar'
+
+        manifest {
+            attributes "Main-Class": getMainClass(), "Implementation-Version": project.version
+        }
+        classifier = 'all'
+        dependsOn configurations.runtimeClasspath
+        from {
+            configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+        } {
+            exclude "META-INF/*.SF"
+            exclude "META-INF/*.DSA"
+            exclude "META-INF/*.RSA"
+        }
+        with jar
+    }
+}
+
+distZip {
+    dependsOn fatJar
+    archiveFileName = 'brouter-' + project.version + '.zip'
+}
+
+distributions {
+    main {
+
+        contents {
+            exclude('**/brouter-codec*.jar')
+            exclude('**/brouter-core*.jar')
+            exclude('**/brouter-expressions*.jar')
+            exclude('**/brouter-map-creator*.jar')
+            exclude('**/brouter-mapaccess*.jar')
+            exclude('**/brouter-server*.jar')
+            exclude('**/brouter-util*.jar')
+            exclude('**/brouter-server')
+            exclude('**/brouter-server.bat')
+            exclude('**/all.brf')
+            exclude('**/dummy.brf')
+            exclude('**/softaccess.brf')
+            from ('../misc') {
+                include 'readmes/*'
+                include 'readmes/osmand/*'
+                include 'profiles2/*'
+            }
+            from ('../brouter-routing-app/build/outputs/apk/release') {
+                include '*.apk'
+            }
+             from ('../brouter-server/build/libs') {
+                include 'brouter-*-all.jar'
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation project(':brouter-codec')
+    implementation project(':brouter-core')
+    implementation project(':brouter-expressions')
+    implementation project(':brouter-map-creator')
+    implementation project(':brouter-mapaccess')
+    implementation project(':brouter-util')
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20180813'
+}

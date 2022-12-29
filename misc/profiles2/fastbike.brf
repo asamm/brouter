@@ -24,7 +24,7 @@ assign allow_ferries            = true   # %allow_ferries% | set to false to dis
 assign ignore_cycleroutes       = false  # %ignore_cycleroutes% | Set to true for better elevation results | boolean
 assign stick_to_cycleroutes     = false  # %stick_to_cycleroutes% | Set to true to just follow cycleroutes | boolean
 assign avoid_unsafe             = false  # %avoid_unsafe% | Set to true to avoid standard highways | boolean
-assign considerTurnRestrictions = false  # %considerTurnRestrictions% | Set to true to take turn restrictions into account | boolean
+assign considerTurnRestrictions = true   # %considerTurnRestrictions% | Set to true to take turn restrictions into account | boolean
 assign processUnusedTags        = false  # %processUnusedTags% | Set to true to output unused tags in data tab | boolean
 assign consider_traffic         = false  # %consider_traffic% | Set to true to avoid traffic | boolean
 assign allow_motorways          = false  # %allow_motorways% | Set to true to allow motorways (useful in Asia / Oceania for example) | boolean
@@ -57,7 +57,7 @@ assign turnInstructionRoundabouts   = true  # %turnInstructionRoundabouts% | Set
 assign any_cycleroute or route_bicycle_icn=yes or route_bicycle_ncn=yes or route_bicycle_rcn=yes route_bicycle_lcn=yes
 assign nodeaccessgranted or any_cycleroute lcn=yes
 
-assign ispaved or surface=paved or surface=asphalt or surface=concrete surface=paving_stones
+assign ispaved or surface=paved or surface=asphalt or surface=concrete or surface=paving_stones surface=sett
 assign isunpaved not or surface= or ispaved or surface=fine_gravel surface=cobblestone
 
 assign turncost = if junction=roundabout then 0
@@ -196,7 +196,7 @@ assign costfactor
   switch or highway=primary highway=primary_link      1.2
   switch or highway=secondary highway=secondary_link  1.1
   switch or highway=tertiary highway=tertiary_link    1.0
-  switch    highway=unclassified                      1.1
+  switch    highway=unclassified                      switch isunpaved 10 1.1
   switch    highway=pedestrian                        10
   switch    highway=steps                             1000
   switch    route=ferry                               5.67

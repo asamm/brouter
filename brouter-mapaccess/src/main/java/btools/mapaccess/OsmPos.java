@@ -6,18 +6,17 @@
 package btools.mapaccess;
 
 
-public interface OsmPos
-{
-  public int getILat();
+public interface OsmPos {
+  int getILat();
 
-  public int getILon();
+  int getILon();
 
-  public short getSElev();
+  short getSElev();
 
-  public double getElev();
+  double getElev();
 
-  public int calcDistance( OsmPos p );
+  int calcDistance(OsmPos p);
 
-  public long getIdFromPos();
+  long getIdFromPos();
 
 }

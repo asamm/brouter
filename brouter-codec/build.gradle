@@ -1,0 +1,8 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    implementation project(':brouter-util')
+	testImplementation  'junit:junit:4.13.1'
+}

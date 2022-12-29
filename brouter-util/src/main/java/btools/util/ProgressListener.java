@@ -1,8 +1,8 @@
 package btools.util;
 
-public interface ProgressListener
-{
-  public void updateProgress( String progress );
-  
-  public boolean isCanceled();
+
+public interface ProgressListener {
+  void updateProgress(String task, int progress);
+
+  boolean isCanceled();
 }
