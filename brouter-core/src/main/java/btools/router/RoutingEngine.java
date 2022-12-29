@@ -65,27 +65,18 @@ public class RoutingEngine extends Thread {
 
   public static final double DEFAULT_MAX_DIST_WPT_NODE = 400.0;
   public static final double MAXIMUM_MAX_DIST_WPT_NODE = 1000.0;
-  private double wptNodeMax = DEFAULT_MAX_DIST_WPT_NODE;
 
   private String outfile;
 
 
-  public RoutingEngine(String outfileBase, String logfileBase, String segmentDir,
+  public RoutingEngine(String outfileBase, String logfileBase, File segmentDir,
                        List<OsmNodeNamed> waypoints, RoutingContext rc) {
 
     initMandatoryParams(outfileBase, logfileBase, segmentDir, waypoints, rc);
     initRoutingService(rc);
   }
 
-  public RoutingEngine(String outfileBase, String logfileBase, String segmentDir,
-                       List<OsmNodeNamed> waypoints, RoutingContext rc, double wptNodeMax) {
-
-    initMandatoryParams(outfileBase, logfileBase, segmentDir, waypoints, rc);
-    this.wptNodeMax = wptNodeMax;
-    initRoutingService(rc);
-  }
-
-  private void initMandatoryParams(String outfileBase, String logfileBase, String segmentDir,
+  private void initMandatoryParams(String outfileBase, String logfileBase, File segmentDir,
                                    List<OsmNodeNamed> waypoints, RoutingContext rc) {
     this.segmentDir = segmentDir;
     this.outfileBase = outfileBase;

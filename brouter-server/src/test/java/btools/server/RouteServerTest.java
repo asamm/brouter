@@ -120,6 +120,7 @@ public class RouteServerTest {
     InputStream inputStream = httpConnection.getInputStream();
     String response = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
     JSONObject jsonResponse = new JSONObject(response);
+    System.out.println(jsonResponse.toString());
     Assert.assertTrue(jsonResponse.query("/profileid").toString().startsWith("custom_"));
     Assert.assertFalse(jsonResponse.has("error"));
   }

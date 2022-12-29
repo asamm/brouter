@@ -1,38 +1,20 @@
 package btools.server;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
-import java.io.Writer;
+import btools.router.*;
+import btools.server.request.ProfileUploadHandler;
+import btools.server.request.RequestHandler;
+import btools.server.request.ServerHandler;
+import btools.util.StackSampler;
+
+import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URLDecoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.StringTokenizer;
+import java.util.*;
 import java.util.zip.GZIPOutputStream;
-
-import btools.router.OsmNodeNamed;
-import btools.router.OsmTrack;
-import btools.router.ProfileCache;
-import btools.router.RoutingContext;
-import btools.router.RoutingEngine;
-import btools.server.request.ProfileUploadHandler;
-import btools.server.request.RequestHandler;
-import btools.server.request.ServerHandler;
-import btools.util.StackSampler;
 
 public class RouteServer extends Thread implements Comparable<RouteServer> {
   public static final String PROFILE_UPLOAD_URL = "/brouter/profile";
@@ -180,11 +162,11 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
         writeHttpHeader(bw, url.endsWith(".json") ? "application/json" : "text/html", HTTP_STATUS_OK);
         SuspectManager.process(url, bw);
         return;
-      } else if ( url.startsWith( "/brouter/health" ) ) {
-          writeHttpHeader(bw, "text/plain", HTTP_STATUS_OK);
-          bw.write("Brouter server alive");
-          bw.flush();
-          return;
+      } else if (url.startsWith("/brouter/health")) {
+        writeHttpHeader(bw, "text/plain", HTTP_STATUS_OK);
+        bw.write("Brouter server alive");
+        bw.flush();
+        return;
       } else {
         writeHttpHeader(bw, HTTP_STATUS_NOT_FOUND);
         bw.flush();
@@ -215,6 +197,19 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
           }
         }
       }
+
+      double wptCatchRange = RoutingEngine.DEFAULT_MAX_DIST_WPT_NODE;
+      if (params.containsKey("wptNodeMax")) {
+        try {
+          wptCatchRange = Double.parseDouble(params.get("wptNodeMax"));
+        } catch (Exception e) {
+          System.out.println(e.getMessage());
+        }
+      }
+      if (wptCatchRange > RoutingEngine.MAXIMUM_MAX_DIST_WPT_NODE)
+        wptCatchRange = RoutingEngine.MAXIMUM_MAX_DIST_WPT_NODE;
+
+      rc.waypointCatchingRange = wptCatchRange;
       cr = new RoutingEngine(null, null, serviceContext.segmentDir, wplist, rc);
       cr.quite = true;
       cr.doRun(maxRunningTime);

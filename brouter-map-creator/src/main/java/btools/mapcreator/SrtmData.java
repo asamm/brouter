@@ -10,15 +10,7 @@ package btools.mapcreator;
  * @author ab
  */
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -90,11 +82,11 @@ public class SrtmData {
          414 411 414 420 425 432 430 431 // NOTE THE LEADING WHITESPACE - a file exported from gdal library
         */
         boolean whitespace = true;
-        for ( ;; ) {
+        for (; ; ) {
           int c = br.read();
-          if ( c < 0 )
+          if (c < 0)
             break;
-          if(c == ' ' && whitespace) 
+          if (c == ' ' && whitespace)
             continue;
           whitespace = false;
           if (c == ' ') {

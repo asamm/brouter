@@ -5,16 +5,16 @@
  */
 package btools.mapaccess;
 
+import btools.codec.DataBuffers;
+import btools.codec.MicroCache;
+import btools.codec.WaypointMatcher;
+import btools.expressions.BExpressionContextWay;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import btools.codec.DataBuffers;
-import btools.codec.MicroCache;
-import btools.codec.WaypointMatcher;
-import btools.expressions.BExpressionContextWay;
 
 public final class NodesCache {
   private File segmentDir;
@@ -48,11 +48,11 @@ public final class NodesCache {
   private long cacheSumClean = 0;
   private long ghostSum = 0;
   private long ghostWakeup = 0;
-  
-  private boolean directWeaving = !Boolean.getBoolean( "disableDirectWeaving" );
+
+  private boolean directWeaving = !Boolean.getBoolean("disableDirectWeaving");
 
   public String formatStatus() {
-    return "collecting=" + garbageCollectionEnabled + " noGhosts=" + ghostCleaningDone + " cacheSum=" + cacheSum + " cacheSumClean=" + cacheSumClean + " ghostSum=" + ghostSum + " ghostWakeup=" + ghostWakeup ;
+    return "collecting=" + garbageCollectionEnabled + " noGhosts=" + ghostCleaningDone + " cacheSum=" + cacheSum + " cacheSumClean=" + cacheSumClean + " ghostSum=" + ghostSum + " ghostWakeup=" + ghostWakeup;
   }
 
   public NodesCache(File segmentDir, BExpressionContextWay ctxWay, boolean forceSecondaryData, long maxmem, NodesCache oldCache, boolean detailed) {
@@ -281,10 +281,10 @@ public final class NodesCache {
     return existing;
   }
 
-  public void matchWaypointsToNodes( List<MatchedWaypoint> unmatchedWaypoints, double maxDistance, OsmNodePairSet islandNodePairs ) {
-    waypointMatcher = new WaypointMatcherImpl( unmatchedWaypoints, maxDistance, islandNodePairs );
-    for( MatchedWaypoint mwp : unmatchedWaypoints ) {
-      preloadPosition( mwp.waypoint );
+  public void matchWaypointsToNodes(List<MatchedWaypoint> unmatchedWaypoints, double maxDistance, OsmNodePairSet islandNodePairs) {
+    waypointMatcher = new WaypointMatcherImpl(unmatchedWaypoints, maxDistance, islandNodePairs);
+    for (MatchedWaypoint mwp : unmatchedWaypoints) {
+      preloadPosition(mwp.waypoint);
     }
     if (first_file_access_failed) {
       throw new IllegalArgumentException("datafile " + first_file_access_name + " not found");

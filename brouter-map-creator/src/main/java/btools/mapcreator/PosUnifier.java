@@ -1,17 +1,12 @@
 package btools.mapcreator;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
-
 import btools.util.CompactLongSet;
 import btools.util.DiffCoderDataOutputStream;
 import btools.util.FrozenLongSet;
+
+import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * PosUnifier does 3 steps in map-processing:
@@ -142,54 +137,54 @@ public class PosUnifier extends MapCreatorBase {
     ilon = (int)( ( lon + 180. )*1000000. + 0.5);
   */
 
-  public double doublelon(int ilon){
+  public double doublelon(int ilon) {
     return (ilon / 1000000.0) - 180.0;
   }
 
-  public double doublelat(int ilat){
+  public double doublelat(int ilat) {
     return (ilat / 1000000.0) - 90.0;
   }
 
-  public int lonIndexHgt(int ilon){
+  public int lonIndexHgt(int ilon) {
     return indexHgt(doublelon(ilon), 180.0);
   }
 
-  public int latIndexHgt(int ilat){
+  public int latIndexHgt(int ilat) {
     return indexHgt(doublelat(ilat), 90.0);
   }
 
-  public int indexHgt(double coord, double bound){
+  public int indexHgt(double coord, double bound) {
     if (coord >= bound) coord = bound - .000001;
     if (coord < -bound) coord = -bound + .000001;
     // adjust for south and west hemispheres
-    if(coord < 0.0 && coord% 1.0 != 0.0) coord -= 1.0;
+    if (coord < 0.0 && coord % 1.0 != 0.0) coord -= 1.0;
     return (int) coord;
   }
 
-   /**
+  /**
    * @param srtmLonIdx west bound
    * @param srtmLatIdx south bound
    * @return name of the tile in ".hgt" convention, no suffix
    */
-  public String hgtFileName(int srtmLonIdx, int srtmLatIdx){
-    String hemiLon = srtmLonIdx >= 0 ? "E": "W";
-    String hemilat = srtmLatIdx >= 0 ? "N": "S";
+  public String hgtFileName(int srtmLonIdx, int srtmLatIdx) {
+    String hemiLon = srtmLonIdx >= 0 ? "E" : "W";
+    String hemilat = srtmLatIdx >= 0 ? "N" : "S";
     String lonS = "00" + Math.abs(srtmLonIdx);
     String latS = "0" + Math.abs(srtmLatIdx);
-    return hemilat + latS.substring(latS.length() - 2) + hemiLon + lonS.substring(lonS.length() -3);
+    return hemilat + latS.substring(latS.length() - 2) + hemiLon + lonS.substring(lonS.length() - 3);
   }
 
   // integration tests
-  public void setSrtmdir(String dir){
+  public void setSrtmdir(String dir) {
     this.srtmdir = dir;
   }
 
-  public SrtmRaster srtmForNode( int ilon, int ilat ) throws Exception {
+  public SrtmRaster srtmForNode(int ilon, int ilat) throws Exception {
 
     int srtmLonIdx = lonIndexHgt(ilon);
     int srtmLatIdx = latIndexHgt(ilat);
 
-    if ( srtmLonIdx == lastSrtmLonIdx && srtmLatIdx == lastSrtmLatIdx ) {
+    if (srtmLonIdx == lastSrtmLonIdx && srtmLatIdx == lastSrtmLatIdx) {
       return lastSrtmRaster;
     }
     lastSrtmLonIdx = srtmLonIdx;
@@ -201,38 +196,38 @@ public class PosUnifier extends MapCreatorBase {
     */
     String filename = hgtFileName(srtmLonIdx, srtmLatIdx);
 
-    lastSrtmRaster = srtmmap.get( filename );
-    if ( lastSrtmRaster == null && !srtmmap.containsKey( filename ) ) {
-      File f = new File( new File( srtmdir ), filename + ".bef" );
-      System.out.println( "checking: " + f + " ilon=" + ilon + " ilat=" + ilat );
-      if ( f.exists() ) {
-        System.out.println( "*** reading: " + f );
+    lastSrtmRaster = srtmmap.get(filename);
+    if (lastSrtmRaster == null && !srtmmap.containsKey(filename)) {
+      File f = new File(new File(srtmdir), filename + ".bef");
+      System.out.println("checking: " + f + " ilon=" + ilon + " ilat=" + ilat);
+      if (f.exists()) {
+        System.out.println("*** reading: " + f);
         try {
-          InputStream isc = new BufferedInputStream( new FileInputStream( f ) );
-          lastSrtmRaster = new RasterCoder().decodeRaster( isc );
+          InputStream isc = new BufferedInputStream(new FileInputStream(f));
+          lastSrtmRaster = new RasterCoder().decodeRaster(isc);
           isc.close();
         } catch (Exception e) {
-          System.out.println( "**** ERROR reading " + f + " ****" );
+          System.out.println("**** ERROR reading " + f + " ****");
         }
-        srtmmap.put( filename, lastSrtmRaster );
+        srtmmap.put(filename, lastSrtmRaster);
         return lastSrtmRaster;
       }
 
-      f = new File( new File( srtmdir ), filename + ".zip" );
-      System.out.println( "reading: " + f + " ilon=" + ilon + " ilat=" + ilat );
-      if ( f.exists() ) {
+      f = new File(new File(srtmdir), filename + ".zip");
+      System.out.println("reading: " + f + " ilon=" + ilon + " ilat=" + ilat);
+      if (f.exists()) {
         try {
-          lastSrtmRaster = new SrtmData( f ).getRaster();
+          lastSrtmRaster = new SrtmData(f).getRaster();
         } catch (Exception e) {
-          System.out.println( "**** ERROR reading " + f + " ****" );
+          System.out.println("**** ERROR reading " + f + " ****");
         }
       }
-      srtmmap.put( filename, lastSrtmRaster );
+      srtmmap.put(filename, lastSrtmRaster);
     }
     return lastSrtmRaster;
   }
 
-  private void resetSrtm() {
+  public void resetSrtm() {
     srtmmap = new HashMap<String, SrtmRaster>();
     lastSrtmLonIdx = -9999;
     lastSrtmLatIdx = -9999;

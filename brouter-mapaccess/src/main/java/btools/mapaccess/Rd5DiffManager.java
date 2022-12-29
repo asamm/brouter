@@ -69,7 +69,7 @@ final public class Rd5DiffManager {
           if (!od.getName().endsWith(".df5")) {
             continue;
           }
-          if ( System.currentTimeMillis() - od.lastModified() > 60*86400000L ) {
+          if (System.currentTimeMillis() - od.lastModified() > 60 * 86400000L) {
             continue; // limit diff history to 60 days
           }
           File updatedDiff = new File(specificNewDiffs, od.getName());
