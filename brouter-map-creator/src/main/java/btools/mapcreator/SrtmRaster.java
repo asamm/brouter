@@ -30,36 +30,6 @@ public class SrtmRaster {
     }
 
     // no weights calculated, use 2d linear interpolation
-<<<<<<< HEAD
-    double drow = (lat - yllcorner)/cellsize -0.5;
-    double dcol = (lon - xllcorner)/cellsize -0.5;
-    int row = (int)drow;
-    int col = (int)dcol;
-    if ( col < 0 ) col = 0;
-    if ( col >= ncols-1 ) col = ncols - 2;
-    if ( row < 0 ) row = 0;
-    if ( row >= nrows-1 ) row = nrows - 2;
-    double wrow = drow-row;
-    double wcol = dcol-col;
-    missingData = false;
-
-    //System.out.println("drow=" + drow + " dcol: " + dcol);
-    //System.out.println("row=" + row + " col=" + col);
-    //System.out.println( "wrow=" + wrow + " wcol=" + wcol );
-
-    double eval = (1.-wrow)*(1.-wcol)*get(row  ,col  )
-             + (   wrow)*(1.-wcol)*get(row+1,col  )
-             + (1.-wrow)*(   wcol)*get(row  ,col+1)
-             + (   wrow)*(   wcol)*get(row+1,col+1);
-
-    //System.out.println(get(row,col));
-    //System.out.println(get(row+1,col));
-    //System.out.println(get(row,col+1));
-    //System.out.println(get(row+1,col+1));
-    //System.out.println( "eval=" + eval );
-
-    return missingData ? Short.MIN_VALUE : (short)(eval*4);
-=======
     double dcol = (lon - xllcorner) / cellsize - 0.5;
     double drow = (lat - yllcorner) / cellsize - 0.5;
     int row = (int) drow;
@@ -79,7 +49,6 @@ public class SrtmRaster {
       + (wrow) * (wcol) * get(row + 1, col + 1);
 // System.out.println( "eval=" + eval );
     return missingData ? Short.MIN_VALUE : (short) (eval * 4);
->>>>>>> master
   }
 
   private short get(int r, int c) {

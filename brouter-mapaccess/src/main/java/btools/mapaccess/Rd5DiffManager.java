@@ -69,16 +69,9 @@ final public class Rd5DiffManager {
           if (!od.getName().endsWith(".df5")) {
             continue;
           }
-<<<<<<< HEAD
-          if ( System.currentTimeMillis() - od.lastModified() > 60*86400000L )
-          {
+          if ( System.currentTimeMillis() - od.lastModified() > 60*86400000L ) {
             continue; // limit diff history to 60 days
-=======
-          if (System.currentTimeMillis() - od.lastModified() > 9 * 86400000L) {
-            continue; // limit diff history to 9 days
->>>>>>> master
           }
-
           File updatedDiff = new File(specificNewDiffs, od.getName());
           if (!updatedDiff.exists()) {
             Rd5DiffTool.addDeltas(od, diffFile, updatedDiff);

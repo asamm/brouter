@@ -48,20 +48,11 @@ public final class NodesCache {
   private long cacheSumClean = 0;
   private long ghostSum = 0;
   private long ghostWakeup = 0;
-<<<<<<< HEAD
   
   private boolean directWeaving = !Boolean.getBoolean( "disableDirectWeaving" );
 
-  public String formatStatus()
-  {
-    return "collecting=" + garbageCollectionEnabled + " noGhosts=" + ghostCleaningDone + " cacheSum=" + cacheSum + " cacheSumClean=" + cacheSumClean + " ghostSum=" + ghostSum + " ghostWakeup=" + ghostWakeup ;
-=======
-
-  private boolean directWeaving = !Boolean.getBoolean("disableDirectWeaving");
-
   public String formatStatus() {
-    return "collecting=" + garbageCollectionEnabled + " noGhosts=" + ghostCleaningDone + " cacheSum=" + cacheSum + " cacheSumClean=" + cacheSumClean + " ghostSum=" + ghostSum + " ghostWakeup=" + ghostWakeup;
->>>>>>> master
+    return "collecting=" + garbageCollectionEnabled + " noGhosts=" + ghostCleaningDone + " cacheSum=" + cacheSum + " cacheSumClean=" + cacheSumClean + " ghostSum=" + ghostSum + " ghostWakeup=" + ghostWakeup ;
   }
 
   public NodesCache(File segmentDir, BExpressionContextWay ctxWay, boolean forceSecondaryData, long maxmem, NodesCache oldCache, boolean detailed) {
@@ -290,21 +281,11 @@ public final class NodesCache {
     return existing;
   }
 
-<<<<<<< HEAD
-  public void matchWaypointsToNodes( List<MatchedWaypoint> unmatchedWaypoints, double maxDistance, OsmNodePairSet islandNodePairs )
-  {
+  public void matchWaypointsToNodes( List<MatchedWaypoint> unmatchedWaypoints, double maxDistance, OsmNodePairSet islandNodePairs ) {
     waypointMatcher = new WaypointMatcherImpl( unmatchedWaypoints, maxDistance, islandNodePairs );
-    for( MatchedWaypoint mwp : unmatchedWaypoints )
-    {
+    for( MatchedWaypoint mwp : unmatchedWaypoints ) {
       preloadPosition( mwp.waypoint );
-=======
-  public void matchWaypointsToNodes(List<MatchedWaypoint> unmatchedWaypoints, double maxDistance, OsmNodePairSet islandNodePairs) {
-    waypointMatcher = new WaypointMatcherImpl(unmatchedWaypoints, maxDistance, islandNodePairs);
-    for (MatchedWaypoint mwp : unmatchedWaypoints) {
-      preloadPosition(mwp.waypoint);
->>>>>>> master
     }
-
     if (first_file_access_failed) {
       throw new IllegalArgumentException("datafile " + first_file_access_name + " not found");
     }
