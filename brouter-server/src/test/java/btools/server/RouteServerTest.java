@@ -66,6 +66,18 @@ public class RouteServerTest {
   }
 
   @Test
+  public void health() throws IOException {
+    URL requestUrl = new URL(baseUrl + "brouter/health");
+    HttpURLConnection httpConnection = (HttpURLConnection) requestUrl.openConnection();
+    httpConnection.connect();
+
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, httpConnection.getResponseCode());
+    InputStream inputStream = httpConnection.getInputStream();
+    String response = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+    Assert.assertTrue(response.contains("alive"));
+  }
+
+  @Test
   public void defaultRouteTrekking() throws IOException {
     URL requestUrl = new URL(baseUrl + "brouter?lonlats=8.723037,50.000491|8.712737,50.002899&nogos=&profile=trekking&alternativeidx=0&format=geojson");
 
