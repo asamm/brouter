@@ -70,7 +70,6 @@ public class RouteServerTest {
     URL requestUrl = new URL(baseUrl + "brouter/health");
     HttpURLConnection httpConnection = (HttpURLConnection) requestUrl.openConnection();
     httpConnection.connect();
-
     Assert.assertEquals(HttpURLConnection.HTTP_OK, httpConnection.getResponseCode());
     InputStream inputStream = httpConnection.getInputStream();
     String response = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);

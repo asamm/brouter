@@ -1,5 +1,7 @@
 package btools.mapcreator;
 
+import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -13,20 +15,18 @@ public class PosUnifierTest {
     int[] lats = {-90, -89, -1, -0, 0, 1, 89, 90, 0, 0, -1, -1};
     int[] lons = {-180, -179, -1, -0, 0, 1, 179, 180, 0, -1, -1, 0};
     String[] expected = {
-        "S90W180",
-        "S89W179",
-        "S01W001",
-        "N00E000",
-        "N00E000",
-        "N01E001",
-        "N89E179",
-        "N90E180",
-
-
-        "N00E000",
-        "N00W001",
-        "S01W001",
-        "S01E000"
+      "S90W180",
+      "S89W179",
+      "S01W001",
+      "N00E000",
+      "N00E000",
+      "N01E001",
+      "N89E179",
+      "N90E180",
+      "N00E000",
+      "N00W001",
+      "S01W001",
+      "S01E000"
     };
     PosUnifier unifier = new PosUnifier();
     for (int i = 0; i < expected.length; i++) {
@@ -71,69 +71,18 @@ public class PosUnifierTest {
 
   private final List<Coord> coords = new ArrayList<Coord>();
 
-  private void addSelected() {
+  private void addCases() {
 
-    coords.add(new Coord(48.0, 12.0));
-    coords.add(new Coord(48.0, 13.0));
-    coords.add(new Coord(49.0, 12.0));
-    coords.add(new Coord(49.0, 13.0));
+    double[] lats = {48.0, 48.0, 49.0, 49.0, 51.0, 51.0, 52.0, 52.0, 52.5, 52.5, 52.5, -72.5, -72.5, -72.5, 51.0, 51.0, 52.0, 52.0, 52.2, 0.0, 1.0E-4, -1.0E-4, -13.0, -13.0, -14.0, -14.0, -14.2, -33.0, -33.0, -34.0, -34.0, -34.2, 36.0, 36.0, 37.0, 37.0, 37.2, 66.0, 66.0, 66.0, 66.0, 66.0, -29.0, -29.0, -30.0, -30.0};
+    double[] lons = {12.0, 13.0, 12.0, 13.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0E-4, -1.0E-4, 0.0, 1.0E-4, -1.0E-4, 0.0, -1.0, 0.0, -1.0, -1.2, 23.0, 23.0, 23.0, 23.0, 24.0, 23.0, 24.0, 24.2, -67.0, -68.0, -67.0, -68.0, -68.2, -101.0, -102.0, -101.0, -102.0, -102.2, 180.0, 179.0, 179.999, -179.999, -179.999, 141.0, 142.0, 141.0, 142.0};
+    Assert.assertEquals(lats.length, lons.length);
+    double[] elevs = {486.0, 425.0, 414.0, 537.0, 24.0, 0.0};
 
-    coords.add(new Coord(51.0, 0.0));
-    coords.add(new Coord(51.0, 1.0));
-    coords.add(new Coord(52.0, 0.0));
-    coords.add(new Coord(52.0, 1.0));
-
-    coords.add(new Coord(52.5, 0.0));
-    coords.add(new Coord(52.5, 0.0001));
-    coords.add(new Coord(52.5, -0.0001));
-
-    coords.add(new Coord(-72.5, 0.0));
-    coords.add(new Coord(-72.5, 0.0001));
-    coords.add(new Coord(-72.5, -0.0001));
-
-    coords.add(new Coord(51.0, 0.0));
-    coords.add(new Coord(51.0, -1.0));
-    coords.add(new Coord(52.0, 0.0));
-    coords.add(new Coord(52.0, -1.0));
-
-    coords.add(new Coord(52.2, -1.2));
-
-    coords.add(new Coord(0.0, 23.0));
-    coords.add(new Coord(0.0001, 23.0));
-    coords.add(new Coord(-0.0001, 23.0));
-
-    coords.add(new Coord(-13.0, 23.0));
-    coords.add(new Coord(-13.0, 24.0));
-    coords.add(new Coord(-14.0, 23.0));
-    coords.add(new Coord(-14.0, 24.0));
-
-    coords.add(new Coord(-14.2, 24.2));
-
-    coords.add(new Coord(-33.0, -67.0));
-    coords.add(new Coord(-33.0, -68.0));
-    coords.add(new Coord(-34.0, -67.0));
-    coords.add(new Coord(-34.0, -68.0));
-
-    coords.add(new Coord(-34.2, -68.2));
-
-    coords.add(new Coord(36.0, -101.0));
-    coords.add(new Coord(36.0, -102.0));
-    coords.add(new Coord(37.0, -101.0));
-    coords.add(new Coord(37.0, -102.0));
-
-    coords.add(new Coord(37.2, -102.2));
-
-    coords.add(new Coord(66.0, 180.0));
-    coords.add(new Coord(66.0, 179.0));
-    coords.add(new Coord(66.0, 179.999));
-    coords.add(new Coord(66.0, -179.999));
-    coords.add(new Coord(66.0, -179.999));
-
-    coords.add(new Coord(-29.0, 141.0));
-    coords.add(new Coord(-29.0, 142.0));
-    coords.add(new Coord(-30.0, 141.0));
-    coords.add(new Coord(-30.0, 142.0));
-
+    for (int i = 0; i < lats.length; i++) {
+      Coord c = new Coord(lats[i], lons[i]);
+      if (i < elevs.length) c.expectedElev = elevs[i];
+      coords.add(c);
+    }
   }
 
   private void addRandom(int n) {
@@ -146,28 +95,36 @@ public class PosUnifierTest {
   }
 
   @Test
-  public void generateIntegrationTestData() throws Exception {
-    addSelected();
+  public void buildIntegrationTestData() throws Exception {
+    addCases();
     addRandom(100);
-    double[] elevs = new double[coords.size()];
     PosUnifier unifier = new PosUnifier();
     unifier.resetSrtm();
     unifier.setSrtmdir(System.getenv("SRTM_FILES_ROOT_ESRI_ASAMM"));
-    for (int i = 0; i < coords.size(); i++) {
-      int ilat = (int) ((coords.get(i).lat + 90.) * 1000000. + 0.5);
-      int ilon = (int) ((coords.get(i).lon + 180.) * 1000000. + 0.5);
+    for (Coord coord : coords) {
+      int ilat = (int) ((coord.lat + 90.) * 1000000. + 0.5);
+      int ilon = (int) ((coord.lon + 180.) * 1000000. + 0.5);
       SrtmRaster raster = unifier.srtmForNode(ilon, ilat);
       raster.usingWeights = false;
-      double elevation = raster.getElevation(ilon, ilat);
-      elevs[i] = elevation;
+      coord.elev = raster.getElevation(ilon, ilat) / 4.0;
+    }
+    // assert at least a few cases, expected values computed by https://www.gpsvisualizer.com/elevation
+    double okDiff = 2.0;
+    for (Coord coord : coords) {
+      double diff = Math.abs(coord.elev - coord.expectedElev);
+      if (coord.expectedElev != -1.1 && diff > okDiff) {
+        System.out.println("Assertion fail for: " + coord.toRichString());
+        assert false;
+      }
     }
     // output
-    for (int i = 0; i < coords.size(); i++) {
-      System.out.println(coords.get(i).toString() + (elevs[i] / 4)); // ???
+    for (Coord coord : coords) {
+      System.out.println(coord.toString());
     }
   }
 
   @Test
+  @Ignore
   public void printFirstRow() throws Exception {
     PosUnifier unifier = new PosUnifier();
     unifier.resetSrtm();
@@ -181,7 +138,7 @@ public class PosUnifierTest {
     }
   }
 
-  class Coord {
+  static class Coord {
     protected Coord(double lat, double lon) {
       this.lat = lat;
       this.lon = lon;
@@ -189,10 +146,16 @@ public class PosUnifierTest {
 
     double lat;
     double lon;
+    double elev;
+    double expectedElev = -1.1;
 
     @Override
     public String toString() {
-      return this.lat + "," + this.lon + ",";
+      return this.lat + "," + this.lon + "," + this.elev;
+    }
+
+    public String toRichString() {
+      return "lat: " + this.lat + ", lon: " + this.lon + ", elev: " + this.elev + ", expected elev: " + this.expectedElev;
     }
   }
 }
