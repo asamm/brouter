@@ -386,6 +386,16 @@ assign classifiermask add          isbadoneway
                       add multiply islinktype     8
                           multiply isgoodforcars 16  
  
+# make sure these tags will propagate to the output message
+
+assign warning = if ( not assisted_trail= ) then 1.0
+                 else if ( not safety_rope= ) then 2.0
+                 else if ( not ladder= ) then 1.0
+                 else if ( not rungs= ) then 1.0
+                 else if ( not sac_scale= ) then 1.0
+                 else 0.0
+                 
+
 ---context:node  # following code refers to node tags
 
 
@@ -420,6 +430,7 @@ assign noaccess  not defaultaccess
 assign noaccessfootexception  foot=yes 
 
 assign initialcost  switch  and noaccess not noaccessfootexception  1000000 switch footaccess 0 switch bikeaccess 4 1000000
+
 
 #############################################################################################
 # ****) Offroad_factor ( ported MTB_factor from bicycle Trekking profile
