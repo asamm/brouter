@@ -7,7 +7,6 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.net.URL;
-import java.nio.file.FileSystemNotFoundException;
 import java.util.ArrayList;
 
 public class ElevationComputeTest {
@@ -26,15 +25,16 @@ public class ElevationComputeTest {
         break;
       }
       String[] items = line.split("\t");
-      coords.add(new PosUnifierTest.Coord(Double.parseDouble(items[0]), Double.parseDouble(items[1])));
+      coords.add(new PosUnifierTest.Coord(Double.parseDouble(items[1]), Double.parseDouble(items[0])));
     }
     System.out.println("Loaded " + coords.size() + " coordinates");
 
     PosUnifier unifier = new PosUnifier();
     unifier.resetSrtm();
+    unifier.setSrtmdir(System.getenv("SRTM_FILES_ROOT_ESRI_ASAMM"));
     for (PosUnifierTest.Coord coord : coords) {
-      int ilat = (int) ((coord.lat + 90.) * 1000000. + 0.5);
       int ilon = (int) ((coord.lon + 180.) * 1000000. + 0.5);
+      int ilat = (int) ((coord.lat + 90.) * 1000000. + 0.5);
       SrtmRaster raster = unifier.srtmForNode(ilon, ilat);
       raster.usingWeights = false;
       coord.elev = raster.getElevation(ilon, ilat) / 4.0;
