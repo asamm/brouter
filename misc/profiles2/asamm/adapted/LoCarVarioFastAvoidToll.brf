@@ -112,9 +112,8 @@ assign islinktype = highway=motorway_link|trunk_link|primary_link|secondary_link
 assign maxspeed_surface =
   switch or surface= surface=paved|asphalt|concrete 999
   switch surface=chipseal 80
-  switch surface=concrete:plates|paving_stones:30 50
   switch surface=compacted 40
-  switch surface=paving_stones|paving_stones:20|cobblestone|sett|unpaved|gravel|cobblestone:flattened|concrete:lanes 30
+  switch surface=paving_stones|cobblestone|sett|unpaved|gravel 30
   switch surface=ground|dirt|grass|earth|grass_paver 20
   switch surface=wood|mud|clay|metal|unhewn_cobblestone 10
   switch surface=fine_gravel ( switch avoid_unpaved 10 40 )
