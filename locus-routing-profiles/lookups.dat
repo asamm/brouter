@@ -710,6 +710,16 @@ piste:grooming;0000000004 backcountry
 piste:oneway;0000000005 yes
 piste:oneway;0000000005 no
 
+surface;0000727427 chipseal
+surface;0000727427 unhewn_cobblestone
+surface;0000727427 rock
+surface;0000727427 woodchips
+
+safety_rope;0000007309 yes *
+rungs;0000007309 yes *
+ladder;0000007309 yes *
+assisted_trail;0000007309 yes *
+access:conditional;0000007309 *
 
  ---context:node
 
@@ -964,3 +974,7 @@ direction;0000021634 both
 traffic_signals:direction;0000062645 forward
 traffic_signals:direction;0000033961 backward
 traffic_signals:direction;0000007309 both
+
+safety_rope;0000007309 yes *
+rungs;0000007309 yes *
+ladder;0000007309 yes *

@@ -36,7 +36,9 @@ public class ElevationComputeTest {
       int ilon = (int) ((coord.lon + 180.) * 1000000. + 0.5);
       int ilat = (int) ((coord.lat + 90.) * 1000000. + 0.5);
       SrtmRaster raster = unifier.srtmForNode(ilon, ilat);
-      raster.usingWeights = false;
+      // false is default in brouter for tiles with cols < 6001
+      // raster.usingWeights = raster.ncols > 6001;
+      raster.usingWeights = true;
       coord.elev = raster.getElevation(ilon, ilat) / 4.0;
       System.out.println(coord.lon + ";" + coord.lat + ";" + coord.elev);
     }
