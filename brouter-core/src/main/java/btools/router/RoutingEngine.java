@@ -260,9 +260,10 @@ public class RoutingEngine extends Thread {
     int startIdx = 0;
     int endIdx = -1;
     int dist = 0;
-    for (int idx = 0; idx < track.nodes.size(); idx++) {
+    int ourSize = track.nodes.size();
+    for (int idx = 0; idx < ourSize; idx++) {
       OsmPathElement n = track.nodes.get(idx);
-      if (n.getSElev() == Short.MIN_VALUE && lastElev != Short.MIN_VALUE) {
+      if (n.getSElev() == Short.MIN_VALUE && lastElev != Short.MIN_VALUE && idx < ourSize-1) {
         // start one point before entry point to get better elevation results
         if (idx > 1)
           startElev = track.nodes.get(idx - 2).getSElev();
@@ -311,7 +312,7 @@ public class RoutingEngine extends Thread {
                     int ind = s.indexOf("%");
                     if (ind != -1)
                       s = s.substring(0, ind);
-                    ind = s.indexOf("�");
+                    ind = s.indexOf("°");
                     if (ind != -1)
                       s = s.substring(0, ind);
                     tmpincline = Double.parseDouble(s.trim());
@@ -327,7 +328,7 @@ public class RoutingEngine extends Thread {
               if (startincline == 0) {
                 startincline = tmpincline;
               } else if (startincline < 0 && tmpincline > 0) {
-                // for the way ?p find the exit point
+                // for the way up find the exit point
                 double diff = endElev - selev;
                 tmpincline = diff / (distRest / 100.);
               }
@@ -365,7 +366,7 @@ public class RoutingEngine extends Thread {
   }
 
   private void logException(Throwable t) {
-    errorMessage = t instanceof IllegalArgumentException ? t.getMessage() : t.toString();
+    errorMessage = t instanceof RuntimeException ? t.getMessage() : t.toString();
     logInfo("Error (linksProcessed=" + linksProcessed + " open paths: " + openSet.getSize() + "): " + errorMessage);
   }
 
@@ -459,6 +460,8 @@ public class RoutingEngine extends Thread {
       }
       matchWaypointsToNodes(matchedWaypoints);
 
+      routingContext.checkMatchedWaypointAgainstNogos(matchedWaypoints);
+
       // detect target islands: restricted search in inverse direction
       routingContext.inverseDirection = !routingContext.inverseRouting;
       airDistanceCostFactor = 0.;
@@ -524,6 +527,9 @@ public class RoutingEngine extends Thread {
     totaltrack.matchedWaypoints = matchedWaypoints;
     totaltrack.processVoiceHints(routingContext);
     totaltrack.prepareSpeedProfile(routingContext);
+
+    totaltrack.showTime = routingContext.showTime;
+    totaltrack.params = routingContext.keyValues;
 
     if (routingContext.poipoints != null)
       totaltrack.pois = routingContext.poipoints;
@@ -747,7 +753,7 @@ public class RoutingEngine extends Thread {
         lon2 = t.nodes.get(i).getILon();
         lat2 = t.nodes.get(i).getILat();
         nLast = t.nodes.get(0);
-        dist = routingContext.calcDistance(lon0, lat0, lon1, lat1);
+        dist = nLast.calcDistance(n);
       } else {
         lon0 = t.nodes.get(i - 2).getILon();
         lat0 = t.nodes.get(i - 2).getILat();
@@ -756,7 +762,7 @@ public class RoutingEngine extends Thread {
         lon2 = t.nodes.get(i).getILon();
         lat2 = t.nodes.get(i).getILat();
         nLast = t.nodes.get(i - 1);
-        dist = routingContext.calcDistance(lon1, lat1, lon2, lat2);
+        dist = nLast.calcDistance(n);
       }
       angle = routingContext.anglemeter.calcAngle(lon0, lat0, lon1, lat1, lon2, lat2);
       n.message.linkdist = dist;
@@ -786,16 +792,15 @@ public class RoutingEngine extends Thread {
         if (ele_last != Short.MIN_VALUE) {
           ehb = ehb + (ele_last - ele) * eleFactor;
         }
-        if (ehb > 10.) {
-          ascend += ehb - 10.;
-          ehb = 10.;
-        } else if (ehb < 0.) {
-          ehb = 0.;
+        if (ehb > 0) {
+          ascend += ehb;
+          ehb = 0;
+        } else if (ehb < -10) {
+          ehb = -10;
         }
       }
 
     }
-    ascend += ehb;
 
     t.ascend = (int) ascend;
     t.plainAscend = (int) ((ele_start - ele_end) * eleFactor + 0.5);
@@ -1251,7 +1256,7 @@ public class RoutingEngine extends Thread {
               if (parentcost < firstMatchCost) firstMatchCost = parentcost;
 
               int costEstimate = path.cost
-                + path.elevationCorrection(routingContext)
+                + path.elevationCorrection()
                 + (costCuttingTrack.cost - pe.cost);
               if (costEstimate <= maxTotalCost) {
                 matchPath = OsmPathElement.create(path, routingContext.countTraffic);
@@ -1384,7 +1389,7 @@ public class RoutingEngine extends Thread {
               OsmLinkHolder dominator = link.getFirstLinkHolder(currentNode);
               while (!trafficSim && dominator != null) {
                 OsmPath dp = (OsmPath) dominator;
-                if (dp.airdistance != -1 && bestPath.definitlyWorseThan(dp, routingContext)) {
+                if (dp.airdistance != -1 && bestPath.definitlyWorseThan(dp)) {
                   break;
                 }
                 dominator = dominator.getNextForLink();

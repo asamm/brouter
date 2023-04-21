@@ -15,6 +15,7 @@ import btools.expressions.BExpressionContext;
 import btools.expressions.BExpressionContextNode;
 import btools.expressions.BExpressionContextWay;
 import btools.mapaccess.GeometryDecoder;
+import btools.mapaccess.MatchedWaypoint;
 import btools.mapaccess.OsmLink;
 import btools.mapaccess.OsmNode;
 import btools.util.CheapAngleMeter;
@@ -52,10 +53,6 @@ public final class RoutingContext {
 
   public int memoryclass = 64;
 
-  public int downhillcostdiv;
-  public int downhillcutoff;
-  public int uphillcostdiv;
-  public int uphillcutoff;
   public boolean carMode;
   public boolean bikeMode;
   public boolean footMode;
@@ -123,12 +120,6 @@ public final class RoutingContext {
 
     setModel(expctxGlobal._modelClass);
 
-    downhillcostdiv = (int) expctxGlobal.getVariableValue("downhillcost", 0.f);
-    downhillcutoff = (int) (expctxGlobal.getVariableValue("downhillcutoff", 0.f) * 10000);
-    uphillcostdiv = (int) expctxGlobal.getVariableValue("uphillcost", 0.f);
-    uphillcutoff = (int) (expctxGlobal.getVariableValue("uphillcutoff", 0.f) * 10000);
-    if (downhillcostdiv != 0) downhillcostdiv = 1000000 / downhillcostdiv;
-    if (uphillcostdiv != 0) uphillcostdiv = 1000000 / uphillcostdiv;
     carMode = 0.f != expctxGlobal.getVariableValue("validForCars", 0.f);
     bikeMode = 0.f != expctxGlobal.getVariableValue("validForBikes", 0.f);
     footMode = 0.f != expctxGlobal.getVariableValue("validForFoot", 0.f);
@@ -171,6 +162,7 @@ public final class RoutingContext {
     showspeed = 0.f != expctxGlobal.getVariableValue("showspeed", 0.f);
     showSpeedProfile = 0.f != expctxGlobal.getVariableValue("showSpeedProfile", 0.f);
     inverseRouting = 0.f != expctxGlobal.getVariableValue("inverseRouting", 0.f);
+    showTime = 0.f != expctxGlobal.getVariableValue("showtime", 0.f);
 
     int tiMode = (int) expctxGlobal.getVariableValue("turnInstructionMode", 0.f);
     if (tiMode != 1) // automatic selection from coordinate source
@@ -233,6 +225,7 @@ public final class RoutingContext {
   public boolean showspeed;
   public boolean showSpeedProfile;
   public boolean inverseRouting;
+  public boolean showTime;
 
   public OsmPrePath firstPrePath;
 
@@ -297,6 +290,61 @@ public final class RoutingContext {
       if (goodGuy) nogos.add(nogo);
     }
     nogopoints = nogos.isEmpty() ? null : nogos;
+  }
+
+  public void checkMatchedWaypointAgainstNogos(List<MatchedWaypoint> matchedWaypoints) {
+    if (nogopoints == null) return;
+    int theSize = matchedWaypoints.size();
+    if (theSize<2) return;
+    int removed = 0;
+    List<MatchedWaypoint> newMatchedWaypoints = new ArrayList<>();
+    MatchedWaypoint prevMwp = null;
+    boolean prevMwpIsInside = false;
+    for (int i = 0; i < theSize; i++) {
+      MatchedWaypoint mwp = matchedWaypoints.get(i);
+      boolean isInsideNogo = false;
+      OsmNode wp = mwp.crosspoint;
+      for (OsmNodeNamed nogo : nogopoints) {
+        if (Double.isNaN(nogo.nogoWeight)
+          && wp.calcDistance(nogo) < nogo.radius
+          && (!(nogo instanceof OsmNogoPolygon)
+          || (((OsmNogoPolygon) nogo).isClosed
+          ? ((OsmNogoPolygon) nogo).isWithin(wp.ilon, wp.ilat)
+          : ((OsmNogoPolygon) nogo).isOnPolyline(wp.ilon, wp.ilat)))) {
+          isInsideNogo = true;
+          break;
+        }
+      }
+      if (isInsideNogo) {
+        boolean useAnyway = false;
+        if (prevMwp == null) useAnyway = true;
+        else if (mwp.direct) useAnyway = true;
+        else if (prevMwp.direct) useAnyway = true;
+        else if (prevMwpIsInside) useAnyway = true;
+        else if (i == theSize-1) {
+          throw new IllegalArgumentException("last wpt in restricted area ");
+        }
+        if (useAnyway) {
+          prevMwpIsInside = true;
+          newMatchedWaypoints.add(mwp);
+        } else {
+          removed++;
+          prevMwpIsInside = false;
+        }
+
+      } else {
+        prevMwpIsInside = false;
+        newMatchedWaypoints.add(mwp);
+      }
+      prevMwp = mwp;
+    }
+    if (newMatchedWaypoints.size() < 2) {
+      throw new IllegalArgumentException("a wpt in restricted area ");
+    }
+    if (removed > 0) {
+      matchedWaypoints.clear();
+      matchedWaypoints.addAll(newMatchedWaypoints);
+    }
   }
 
   public boolean allInOneNogo(List<OsmNode> waypoints) {
@@ -462,7 +510,7 @@ public final class RoutingContext {
         }
       }
     }
-    return (int) (d + 0.5);
+    return (int) Math.max(1.0, Math.round(d));
   }
 
   public OsmPathModel pm;

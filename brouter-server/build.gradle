@@ -13,7 +13,7 @@ application {
             attributes "Main-Class": getMainClass(), "Implementation-Version": project.version
         }
     }
-	
+
     task fatJar(type: Jar) {
         archiveFileName = 'brouter-' + project.version + '-all.jar'
 
