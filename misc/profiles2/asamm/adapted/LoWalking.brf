@@ -167,10 +167,6 @@ assign noaccess  not defaultaccess
 assign noaccessfootexception  foot=yes 
 assign accesspenalty  switch  and noaccess not noaccessfootexception  100000 switch footaccess 0 switch bikeaccess 4 100000
 
-assign badoneway = 0
-assign onewaypenalty = 0
-
-
 #SAC is estimated path difficulty, 
 #integrating both MTB and SAC scales with estimated MTB/SAC difficulty matching
 #see http://wiki.openstreetmap.org/wiki/Key:mtb:scale
@@ -385,16 +381,7 @@ assign classifiermask add          isbadoneway
                       add multiply isroundabout   4
                       add multiply islinktype     8
                           multiply isgoodforcars 16  
- 
-# make sure these tags will propagate to the output message
 
-assign warning = if ( not assisted_trail= ) then 1.0
-                 else if ( not safety_rope= ) then 2.0
-                 else if ( not ladder= ) then 1.0
-                 else if ( not rungs= ) then 1.0
-                 else if ( not sac_scale= ) then 1.0
-                 else 0.0
-                 
 
 ---context:node  # following code refers to node tags
 
