@@ -214,14 +214,14 @@ else 30
 
 assign defaultaccess =
        if access= then not motorroad=yes
-       else if access=private|no then false
-       else true    
+       else if access=private|no then switch bicycle=permissive|yes true false
+       else true  
    
 assign bikeaccess =
        if nodeaccessgranted then true
        else if hascycleway then true
        else if bicycle= then   (  if vehicle= then defaultaccess  else not vehicle=private|no   )
-                        else  not bicycle=private|no|dismount  
+                        else  switch bicycle=private|no|dismount false true
 
 assign footaccess =
        if bikeaccess then true
@@ -253,7 +253,7 @@ assign onewaypenalty =
          else if highway=primary|primary_link               then 50
          else if highway=secondary|secondary_link           then 30
          else if highway=tertiary|tertiary_link             then 20
-         else 4.0   
+         else 7.0   
          
        else 0.0   
 
@@ -541,7 +541,7 @@ assign   initial_cost_node    0     # 0 as default
 assign defaultaccess =
        if ( access= ) then  if allow_default_barrier_restriction then not barrier=gate # add default barrier restrictions here! - modified v2.5.15, conditioned in 2.6
                                                                  else true 
-       else if ( access=private|no ) then false
+       else if ( access=private|no ) then switch bicycle=permissive|yes true false
        else true
 
 assign bikeaccess =
@@ -551,7 +551,7 @@ assign bikeaccess =
          if vehicle= then defaultaccess
          else not vehicle=private|no
        )
-       else not bicycle=private|no|dismount
+       else switch bicycle=private|no|dismount false true 
 
 assign footaccess =
        if bicycle=dismount then true

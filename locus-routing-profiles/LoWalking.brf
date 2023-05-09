@@ -142,7 +142,6 @@ assign turncost   0 #v1.8.3
 
 assign initialcost 
    switch route=ferry 10000  
-      
    switch or shortest_way  is_ldhr  0 initialcost_value 
 
 assign defaultaccess    switch access=    not motorroad=yes    switch or access=private access=no   0   1
@@ -164,12 +163,8 @@ assign footaccess     or any_hiking_route
                       switch foot=      defaultaccess    not foot=private|no
                          
 assign noaccess  not defaultaccess
-assign noaccessfootexception  foot=yes 
+assign noaccessfootexception  foot=yes|permissive
 assign accesspenalty  switch  and noaccess not noaccessfootexception  100000 switch footaccess 0 switch bikeaccess 4 100000
-
-assign badoneway = 0
-assign onewaypenalty = 0
-
 
 #SAC is estimated path difficulty, 
 #integrating both MTB and SAC scales with estimated MTB/SAC difficulty matching
@@ -300,9 +295,9 @@ assign rawcostfactor # can be <1.0, is treated later
   else if highway=trunk|trunk_link    then 
       ( switch iswet ( switch issidewalk 1.5 10 )    ( switch issidewalk 2.0 20 ) )
   else if highway=primary|primary_link    then 
-      ( switch iswet ( switch issidewalk 1.5 5 )    ( switch issidewalk 2.0 10 ) )     
+      ( switch iswet ( switch issidewalk 1.5 4.5 )    ( switch issidewalk 2.0 8 ) )     
   else if highway=secondary|secondary_link        then    
-      ( switch iswet  ( switch issidewalk 1.2 3.0 )    ( switch issidewalk 1.2 2.5 ) )
+      ( switch iswet  ( switch issidewalk 1.2 2.8 )    ( switch issidewalk 1.2 2.2 ) )
   else if highway=tertiary|tertiary_link        then
       ( if iswet then ( switch issidewalk 1.1 1.2 ) else ( switch issidewalk 1.1 1.2 ) )
   else if highway=unclassified                 then
@@ -316,9 +311,20 @@ assign rawcostfactor2
   if equal hiking_routes_preference 0.0     then    rawcostfactor  # Not preferring hiking routes
   else if is_ldhr                 then    rawcostfactor  # is hiking route
                           else    multiply rawcostfactor nonhiking_route_penalty    
-                          
-assign costfactor if shortest_way  then  ( add 1 accesspenalty )   
-       else max 1.0 add rawcostfactor2 Offroad_factor_for_road                            
+     
+assign badonewaytrail 
+   switch reversedirection=yes
+       # wrong direction
+       switch oneway:foot=yes true
+           switch foot:backward=no true
+               if and oneway=yes and highway=path|footway foot=yes then true else false
+   # right direction
+   false
+
+assign costfactor 
+       if badonewaytrail then 10000 
+       else if shortest_way  then  ( add 1 accesspenalty )   
+       else max 1.0 add rawcostfactor2 Offroad_factor_for_road                           
 
 assign downhillcostfactor
     if shortest_way  then (   add 1 accesspenalty )   else
@@ -385,7 +391,8 @@ assign classifiermask add          isbadoneway
                       add multiply isroundabout   4
                       add multiply islinktype     8
                           multiply isgoodforcars 16  
- 
+
+
 ---context:node  # following code refers to node tags
 
 
@@ -417,9 +424,10 @@ assign footaccess
                         1
 
 assign noaccess  not defaultaccess
-assign noaccessfootexception  foot=yes 
+assign noaccessfootexception  foot=yes|permissive
 
 assign initialcost  switch  and noaccess not noaccessfootexception  1000000 switch footaccess 0 switch bikeaccess 4 1000000
+
 
 #############################################################################################
 # ****) Offroad_factor ( ported MTB_factor from bicycle Trekking profile
