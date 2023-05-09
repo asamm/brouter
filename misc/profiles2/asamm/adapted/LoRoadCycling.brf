@@ -85,7 +85,7 @@ assign defaultaccess
                     else true
               )
               switch or access=private access=no
-                     false
+                     switch bicycle=permissive|yes true false
                      true
 
 #
@@ -112,7 +112,7 @@ assign footaccess =
                     not or foot=private foot=no
 
 #
-# if not bike-, but foot-acess, just a moderate penalty,
+# if not bike-, but foot-access, just a moderate penalty,
 # otherwise access is forbidden
 #
 assign accesspenalty
@@ -143,7 +143,7 @@ assign onewaypenalty =
          else if ( highway=primary|primary_link              ) then 50
          else if ( highway=secondary|secondary_link          ) then 30
          else if ( highway=tertiary|tertiary_link            ) then 20
-         else 6.0
+         else 7.0
        )
        else 0.0
 
@@ -275,7 +275,7 @@ assign defaultaccess
        switch access=
               1 # add default barrier restrictions here!
               switch or access=private access=no
-                     0
+                     switch bicycle=permissive|yes 1 0
                      1
 
 assign bikeaccess
