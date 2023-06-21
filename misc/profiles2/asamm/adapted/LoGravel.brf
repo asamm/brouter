@@ -24,7 +24,7 @@ assign   cycleroutes_pref       0.5 # also CRP *)  costfactor penalty for not be
 assign   MTB_factor             0.0 # default 0.0, *)
 assign   smallpaved_factor      0.0 # default 0.0, *)
 assign   avoid_unsafe           0 # 0 as default, gives penalty to mainroad without bike friendly status.
-assign   hills                  1 # 1=default / 0=BRouter default/ 1=+ penalty for uphills >3.0%/ 2=velomobile-like avoiding slopes, 3= simulates ascend/length time equiv.
+assign   hills                  1 # 1=default / 0=BRouter default/ 1=+ penalty for uphills >3.0 perc./ 2=velomobile-like avoiding slopes, 3= simulates ascend/length time equiv.
                                   # 4=valley mode, 5=No-Flats mode
 assign   isbike_for_mainroads   true # default=true / if false then bike friendly tag hints for mainroads are ignored, keeping their high penalties. v2.5.20
 assign   path_preference        0.0 # 0.0 as default, try 20.0 to penalize nonpath ways a/o paved ways
