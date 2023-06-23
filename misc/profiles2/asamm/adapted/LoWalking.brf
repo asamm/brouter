@@ -216,16 +216,16 @@ assign  SAC_scale_penalty
        else 1.0   
        
 assign tracktype_penalty (
-    if not istrack           then 0.0    else if tracktype=       then 0.0
-    else if tracktype=grade1 then 0.1    else if tracktype=grade2 then 0.05
-    else if tracktype=grade3 then 0.0    else if tracktype=grade4 then 0.1
-    else if tracktype=grade5 then 0.2       else 0.0 )
+    if not istrack           then 0.0    else if tracktype=       then 0.1
+    else if tracktype=grade1 then 0.1    else if tracktype=grade2 then 0.15
+    else if tracktype=grade3 then 0.2    else if tracktype=grade4 then 0.5
+    else if tracktype=grade5 then 0.8    else 0.1 )
 
 assign surface_penalty (
     if not istrack                           then 0.0
     else if ispaved                          then 0.0
     else if surface=cobblestone              then 0.1
-    else if surface=fine_gravel|ground|earth|unpaved|grass|compacted then 0.05
+    else if surface=fine_gravel|ground|earth|unpaved|grass|compacted then 0.1
     else if surface=dirt|sand                then 0.25
     else if surface=                         then 0.0
     else if surface=gravel|pebblestone       then 0.2
@@ -342,10 +342,10 @@ assign uphillcostfactor
     max 1.0 
     add rawcostfactor2
     add Offroad_factor_for_road
-    if ismuddy                      then 0.3    # slicky
+    if ismuddy                      then 0.5    # slicky
     else if surface=grass           then 0.1    # unsure foot
     else if ispaved                 then -0.1   # sure foot
-    else if surface=gravel|pebblestone|fine_gravel  then 0.2 # slides
+    else if surface=gravel|pebblestone|fine_gravel  then 0.3 # slides
                                                     else 0.0
         
 # way priorities used for voice hint generation
