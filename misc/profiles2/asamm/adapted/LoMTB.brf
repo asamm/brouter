@@ -91,8 +91,8 @@ assign   elevationbufferreduce  if ValleyMode then 0.0 else ( multiply 0.333 max
 assign   uphillCFshift     0.0 # experimental shifting of up/downhillcostfactors as alternative way of 
 assign   downhillCFshift   0.0 # prioritizing/penalizing of up/downhills, based on length, not elevation
 
-assign    pass1coefficient 1.8
-assign    pass2coefficient 0
+assign   pass1coefficient 1.8
+assign   pass2coefficient 0
 
 assign   use_proposed_cn        1 # 0 as default, considers proposed cycle networks as unmarked but valid cycleroutes.
 assign   considerTurnRestrictions = true  #v2.5.11
@@ -169,19 +169,14 @@ assign probablyGood or ispaved  and isbike not isunpaved  #probably good surface
 assign turncost  if  ismainroad  then 90    else if ispaved then 60   else 30 
 # Turn cost is based solely on estimation of road speediness and eventual time cost of turning, partially promoting tracks )
 
-assign ismuddy and iswet
-               and ( not surface=gravel|pebblestone )  # ***)
-                   ( or isunpaved ( and surface= and highway=track|path not tracktype=grade1 )  )
-
 assign nosurface or surface= surface=unknown
 assign nosurfacenortracktype and nosurface tracktype=
 assign ishard or ispaved surface=cobblestone|sett|compacted|fine_gravel|gravel|pebblestone  
 assign issoft not or nosurface ishard
 
 # bend /wayvariables
+# bstart /initialcost 
 
-
-# bstart /initialcost                      
 assign initialclassifier
 if route=ferry then 1
 else if ( ford=yes )                             then 15
@@ -267,11 +262,11 @@ assign smoothness_penalty
 
 if not consider_smoothness                                then 0.0 else
 if smoothness=                                            then 0.0 else
-if smoothness=excellent|very_good|good                    then 0.0 else
-if smoothness=intermediate                                then 0.2 else
-if smoothness=bad|robust_wheels                           then 0.5 else
-if smoothness=very_bad|high_clearance                     then 1.2 else
-if smoothness=horrible|off_road_wheels                    then 2.5 else
+if smoothness=excellent|very_good|good                    then 0.2 else
+if smoothness=intermediate                                then 0.0 else
+if smoothness=bad|robust_wheels                           then 0.0 else
+if smoothness=very_bad|high_clearance                     then 0.8 else
+if smoothness=horrible|off_road_wheels                    then 2.8 else
 if smoothness=very_horrible                               then 5.0 else
 if smoothness=impassable                                  then 10.0 else
 0.0
@@ -282,12 +277,12 @@ assign mtb_scale_penalty  if not consider_smoothness then 0.0 else
 # http://wiki.openstreetmap.org/wiki/Key:mtb:scale
 
 if mtb:scale=        then 0.0 else   if mtb:scale=0-      then 0.0 else
-if mtb:scale=0       then 0.0 else   if mtb:scale=0+      then 0.3 else
-if mtb:scale=1-      then 0.7 else   if mtb:scale=1       then 1.2 else
-if mtb:scale=1+      then 1.8 else   if mtb:scale=2-      then 2.5 else
-if mtb:scale=2       then 5.0 else   if mtb:scale=2+      then 10.0 else
-if mtb:scale=3       then 15.0 else   
-if mtb:scale=4|5|6   then 9000
+if mtb:scale=0       then 0.0 else   if mtb:scale=0+      then 0.0 else
+if mtb:scale=1-      then 0.0 else   if mtb:scale=1       then 0.0 else
+if mtb:scale=1+      then 0.8 else   if mtb:scale=2-      then 1.2 else
+if mtb:scale=2       then 1.8 else   if mtb:scale=2+      then 3.0 else
+if mtb:scale=3       then 9.0 else   
+if mtb:scale=4|5|6   then 90
                      else 0.0
 
 assign roughness_penalty max smoothness_penalty max mtb_scale_penalty  ( if ford=yes then ford_costfactor else 0 ) 
@@ -342,14 +337,14 @@ assign highwayclass_basefactor
   
 assign tracktype_penalty 
     if tracktype=  then 0.0 else 
-        switch tracktype=grade1 0.0 switch tracktype=grade2 0.4 switch tracktype=grade3 0.7
-        switch tracktype=grade4 0.9 switch tracktype=grade5 1.0                         0.5
+        switch tracktype=grade1 0.0 switch tracktype=grade2 0.0 switch tracktype=grade3 0.3
+        switch tracktype=grade4 0.6 switch tracktype=grade5 1.0                         0.5
         
 assign surface_penalty
     if nosurface then 0.0 else
-        switch surface=asphalt|paved   0.0 switch surface=concrete|paving_stones 0.2
-        switch surface=sett|compacted  0.4 switch surface=cobblestone|ground|earth|unpaved|dirt|fine_gravel  0.6
-        switch surface=grass|sand      1.0 switch surface=gravel|pebblestone     1.5        0.6        
+        switch surface=asphalt|paved   0.5 switch surface=concrete|paving_stones 0.2
+        switch surface=sett|compacted  0.2 switch surface=cobblestone|ground|earth|unpaved|dirt|fine_gravel  0.2
+        switch surface=grass|sand      1.6 switch surface=gravel|pebblestone     0.8        0.6        
     
 assign tracktype_surface_penalty 
     if nosurfacenortracktype then  ( switch ismainroad 0.0 switch isotherroad  0.0 switch highway=path 0.8 0.4  ) 
@@ -360,27 +355,35 @@ assign tracktype_surface_penalty
 assign not_isbike_penalty   if isbike then 0.0 
      else if ismainroad then
         add switch bicycle=use_sidepath 2.0 0.0  
-        switch highway=trunk|trunk_link          8.2  switch highway=primary|primary_link      1.5  
+        switch highway=trunk|trunk_link          8.2  switch highway=primary|primary_link      5.5  
         switch highway=secondary|secondary_link  0.4  0.3 # tertiary|tertiary_link|unclassified
      else if istrack then  
-        switch highway=footway            3.5   switch or ispaved tracktype=grade1 0.0 
-        switch and tracktype= not isunpaved  ( switch highway=path 3.5 1.0 )
-        switch tracktype=                 3.0   switch tracktype=grade1           0.2
-        switch tracktype=grade2           0.6   switch tracktype=grade3           1.2
-        switch tracktype=grade4           2.0   switch tracktype=grade5           3.0
-        3.0 
+        switch highway=footway            1.8   switch or ispaved tracktype=grade1 0.0 
+        switch and tracktype= not isunpaved  ( switch highway=path 0.2 1.0 )
+        switch tracktype=                 0.5   switch tracktype=grade1           0.0
+        switch tracktype=grade2           0.0   switch tracktype=grade3           0.4
+        switch tracktype=grade4           0.6   switch tracktype=grade5           2.5
+        1.8 
      else 
         switch    highway=pedestrian 2.0   switch    highway=bridleway  2.0
         switch    highway=cycleway   0.0   switch    highway=residential|living_street 0.0
         switch    highway=service    0.0   0.0
 
 assign wet_penalty    if   not iswet    then 0.0 else
-    switch surface=cobblestone|sett     1.0     switch ispaved                      0.0
-    switch surface=compacted            0.6     switch surface=fine_gravel          0.8
-    switch surface=                     switch not istrack 0.5 switch highway=path  2.0 1.0 
-    switch surface=grass                switch highway=path  2.5 1.5
-    switch surface=ground|earth|unpaved|sand|dirt|mud   switch highway=path 3.5 2.0
-    2.0
+                      if ispaved then 0.0 else
+                      if surface=cobblestone|sett then 0.2 else
+                      if surface=fine_gravel then 0.2 else
+                      if surface=compacted then 0.2 else
+                      if surface=grass then 2.0 else
+                      if surface=ground|earth|unpaved|sand|dirt|mud then 3.0 else
+                      if tracktype=grade1 then 0.2 else
+                      if tracktype=grade2 then 0.2 else
+                      if tracktype=grade3 then 0.8 else
+                      if tracktype=grade4 then 1.6 else
+                      if tracktype=grade5 then 2.6 else
+                      if highway=track|service|unsurfaced then 2.0 else
+                      if highway=path|footway|bridleway then 2.0
+                      else 0.0
     
 # bend /HWclass_bfactor_components
     
