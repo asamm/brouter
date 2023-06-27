@@ -21,7 +21,7 @@
 assign   iswet                  0 # %is_wet% 0 as default, *) flag for weather conditions
 assign   turnInstructionMode  = 2 # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style
 assign   cycleroutes_pref       0.2 # also CRP *)  costfactor penalty for not being cycleroute
-assign   MTB_factor             2.0 # default 0.0, *)
+assign   MTB_factor             1.6 # default 0.0, *)
 assign   smallpaved_factor      -1.0 # default 0.0, *)
 assign   avoid_unsafe           0 # 0 as default, gives penalty to mainroad without bike friendly status.
 assign   hills                  1 # 1=default / 0=BRouter default/ 1=+ penalty for uphills >3.0 perc. / 2=velomobile-like avoiding slopes, 3= simulates ascend/length time equiv.
