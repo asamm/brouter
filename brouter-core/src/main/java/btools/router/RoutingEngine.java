@@ -83,35 +83,21 @@ public class RoutingEngine extends Thread {
 
   private String outfile;
 
-
   public RoutingEngine(String outfileBase, String logfileBase, File segmentDir,
                        List<OsmNodeNamed> waypoints, RoutingContext rc) {
-    initMandatoryParams(outfileBase, logfileBase, segmentDir, waypoints, rc);
-    initRoutingService(rc);
-  }
-
-  private void initMandatoryParams(String outfileBase, String logfileBase, File segmentDir,
-                                   List<OsmNodeNamed> waypoints, RoutingContext rc) {
-    this.outfileBase = outfileBase;
-    this.logfileBase = logfileBase;
-    this.segmentDir = segmentDir;
-    this.waypoints = waypoints;
-    this.routingContext = rc;
-    this.infoLogEnabled = outfileBase != null;
+    this(outfileBase, logfileBase, segmentDir, waypoints, rc, 0);
   }
 
   public RoutingEngine(String outfileBase, String logfileBase, File segmentDir,
                        List<OsmNodeNamed> waypoints, RoutingContext rc, int engineMode) {
+    this.segmentDir = segmentDir;
     this.outfileBase = outfileBase;
     this.logfileBase = logfileBase;
-    this.segmentDir = segmentDir;
     this.waypoints = waypoints;
+    this.infoLogEnabled = outfileBase != null;
     this.routingContext = rc;
     this.engineMode = engineMode;
-    this.infoLogEnabled = outfileBase != null;
-  }
 
-  private void initRoutingService(RoutingContext rc) {
     File baseFolder = new File(routingContext.localFunction).getParentFile();
     baseFolder = baseFolder == null ? null : baseFolder.getParentFile();
     if (baseFolder != null) {
