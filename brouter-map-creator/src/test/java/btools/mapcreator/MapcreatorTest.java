@@ -9,8 +9,10 @@ import java.net.URL;
 public class MapcreatorTest {
   @Test
   public void mapcreatorTest() throws Exception {
-    URL mapurl = this.getClass().getResource("/dreieich.osm.gz");
-    Assert.assertNotNull("test-osm-map dreieich.osm not found", mapurl);
+    System.setProperty("avoidMapPolling", "true");
+
+    URL mapurl = this.getClass().getResource("/dreieich.pbf");
+    Assert.assertNotNull("test-osm-map dreieich.pbf not found", mapurl);
     File mapFile = new File(mapurl.getFile());
     File workingDir = mapFile.getParentFile();
     File profileDir = new File(workingDir, "/../../../../misc/profiles2");
@@ -33,14 +35,14 @@ public class MapcreatorTest {
     File profileCheck = new File(profileDir, "softaccess.brf");
     File borderFile = new File(tmpdir, "bordernids.dat");
 
-    new OsmFastCutter().doCut(lookupFile, nodes, ways, nodes55, ways55, borderFile, relFile, resFile, profileAll, profileReport, profileCheck, mapFile);
+    new OsmFastCutter().doCut(lookupFile, nodes, ways, nodes55, ways55, borderFile, relFile, resFile, profileAll, profileReport, profileCheck, mapFile, null);
 
 
     // run PosUnifier
     File unodes55 = new File(tmpdir, "unodes55");
     File bordernodes = new File(tmpdir, "bordernodes.dat");
     unodes55.mkdir();
-    new PosUnifier().process(nodes55, unodes55, borderFile, bordernodes, "/private-backup/srtm");
+    new PosUnifier().process(nodes55, unodes55, borderFile, bordernodes, workingDir.getAbsolutePath());
 
     // run WayLinker
     File segments = new File(tmpdir, "segments");

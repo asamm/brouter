@@ -33,6 +33,8 @@ public class OsmCutter extends MapCreatorBase {
   public RestrictionCutter restrictionCutter;
   public NodeFilter nodeFilter;
 
+  private DatabasePseudoTagProvider dbPseudoTagProvider;
+
   public static void main(String[] args) throws Exception {
     System.out.println("*** OsmCutter: cut an osm map in node-tiles + a way file");
     if (args.length != 6 && args.length != 7) {
@@ -55,9 +57,6 @@ public class OsmCutter extends MapCreatorBase {
   private BExpressionContextWay _expctxWay;
   private BExpressionContextNode _expctxNode;
 
-  // private BExpressionContextWay _expctxWayStat;
-  // private BExpressionContextNode _expctxNodeStat;
-
   public void process(File lookupFile, File outTileDir, File wayFile, File relFile, File resFile, File profileFile, File mapFile) throws Exception {
     if (!lookupFile.exists()) {
       throw new IllegalArgumentException("lookup-file: " + lookupFile + " does not exist");
@@ -69,10 +68,6 @@ public class OsmCutter extends MapCreatorBase {
     _expctxNode = new BExpressionContextNode(meta);
     meta.readMetaData(lookupFile);
     _expctxWay.parseFile(profileFile, "global");
-
-
-    // _expctxWayStat = new BExpressionContextWay( null );
-    // _expctxNodeStat = new BExpressionContextNode( null );
 
     this.outTileDir = outTileDir;
     if (!outTileDir.isDirectory())
@@ -117,6 +112,9 @@ public class OsmCutter extends MapCreatorBase {
     return "records read: " + recordCnt + " nodes=" + nodesParsed + " ways=" + waysParsed + " rels=" + relsParsed + " changesets=" + changesetsParsed;
   }
 
+  public void setJdbcUrl(String url) {
+    dbPseudoTagProvider = new DatabasePseudoTagProvider(url);
+  }
 
   @Override
   public void nextNode(NodeData n) throws Exception {
@@ -173,13 +171,16 @@ public class OsmCutter extends MapCreatorBase {
     // encode tags
     if (w.getTagsOrNull() == null) return;
 
+    if (dbPseudoTagProvider != null) {
+      dbPseudoTagProvider.addTags(w.wid, w.getTagsOrNull());
+    }
+
     generatePseudoTags(w.getTagsOrNull());
 
     int[] lookupData = _expctxWay.createNewLookupData();
     for (String key : w.getTagsOrNull().keySet()) {
       String value = w.getTag(key);
       _expctxWay.addLookupValue(key, value.replace(' ', '_'), lookupData);
-      // _expctxWayStat.addLookupValue( key, value, null );
     }
     w.description = _expctxWay.encode(lookupData);
 

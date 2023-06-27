@@ -95,7 +95,7 @@ public final class NodesCache {
         fileRows = new OsmFile[180][];
       }
     } else {
-      fileCache = new HashMap<String, PhysicalFile>(4);
+      fileCache = new HashMap<>(4);
       fileRows = new OsmFile[180][];
       dataBuffers = new DataBuffers();
       secondarySegmentsDir = StorageConfigHelper.getSecondarySegmentDir(segmentDir);
@@ -220,8 +220,7 @@ public final class NodesCache {
       node.parseNodeBody(segment, nodesMap, expCtxWay);
     }
 
-    if (garbageCollectionEnabled) // garbage collection
-    {
+    if (garbageCollectionEnabled) { // garbage collection
       cacheSum -= segment.collect(segment.getSize() >> 1); // threshold = 1/2 of size is deleted
     }
 

@@ -36,10 +36,10 @@ public abstract class BExpressionContext implements IByteArrayUnifier {
 
   public String _modelClass;
 
-  private Map<String, Integer> lookupNumbers = new HashMap<String, Integer>();
-  private List<BExpressionLookupValue[]> lookupValues = new ArrayList<BExpressionLookupValue[]>();
-  private List<String> lookupNames = new ArrayList<String>();
-  private List<int[]> lookupHistograms = new ArrayList<int[]>();
+  private Map<String, Integer> lookupNumbers = new HashMap<>();
+  private List<BExpressionLookupValue[]> lookupValues = new ArrayList<>();
+  private List<String> lookupNames = new ArrayList<>();
+  private List<int[]> lookupHistograms = new ArrayList<>();
   private boolean[] lookupIdxUsed;
 
   private boolean lookupDataFrozen = false;
@@ -50,7 +50,7 @@ public abstract class BExpressionContext implements IByteArrayUnifier {
   private BitCoderContext ctxEndode = new BitCoderContext(abBuf);
   private BitCoderContext ctxDecode = new BitCoderContext(new byte[0]);
 
-  private Map<String, Integer> variableNumbers = new HashMap<String, Integer>();
+  private Map<String, Integer> variableNumbers = new HashMap<>();
 
   private float[] variableData;
 
@@ -134,8 +134,7 @@ public abstract class BExpressionContext implements IByteArrayUnifier {
     // (skip first bit ("reversedirection") )
 
     // all others are generic
-    for (int inum = 1; inum < lookupValues.size(); inum++) // loop over lookup names
-    {
+    for (int inum = 1; inum < lookupValues.size(); inum++) { // loop over lookup names
       int d = ld[inum];
       if (d == 0) {
         skippedTags++;
@@ -162,8 +161,7 @@ public abstract class BExpressionContext implements IByteArrayUnifier {
     // crosscheck: decode and compare
     int[] ld2 = new int[lookupValues.size()];
     decode(ld2, false, ab);
-    for (int inum = 1; inum < lookupValues.size(); inum++) // loop over lookup names (except reverse dir)
-    {
+    for (int inum = 1; inum < lookupValues.size(); inum++) { // loop over lookup names (except reverse dir)
       if (ld2[inum] != ld[inum])
         throw new RuntimeException("assertion failed encoding inum=" + inum + " val=" + ld[inum] + " " + getKeyValueDescription(false, ab));
     }
@@ -212,8 +210,7 @@ public abstract class BExpressionContext implements IByteArrayUnifier {
   public String getKeyValueDescription(boolean inverseDirection, byte[] ab) {
     StringBuilder sb = new StringBuilder(200);
     decode(lookupData, inverseDirection, ab);
-    for (int inum = 0; inum < lookupValues.size(); inum++) // loop over lookup names
-    {
+    for (int inum = 0; inum < lookupValues.size(); inum++) { // loop over lookup names
       BExpressionLookupValue[] va = lookupValues.get(inum);
       int val = lookupData[inum];
       String value = (val >= 1000) ? Float.toString((val - 1000) / 100f) : va[val].toString();
@@ -226,10 +223,9 @@ public abstract class BExpressionContext implements IByteArrayUnifier {
   }
 
   public List<String> getKeyValueList(boolean inverseDirection, byte[] ab) {
-    ArrayList<String> res = new ArrayList<String>();
+    ArrayList<String> res = new ArrayList<>();
     decode(lookupData, inverseDirection, ab);
-    for (int inum = 0; inum < lookupValues.size(); inum++) // loop over lookup names
-    {
+    for (int inum = 0; inum < lookupValues.size(); inum++) { // loop over lookup names
       BExpressionLookupValue[] va = lookupValues.get(inum);
       int val = lookupData[inum];
       // no negative values
@@ -433,7 +429,7 @@ public abstract class BExpressionContext implements IByteArrayUnifier {
 
 
   public void dumpStatistics() {
-    TreeMap<String, String> counts = new TreeMap<String, String>();
+    TreeMap<String, String> counts = new TreeMap<>();
     // first count
     for (String name : lookupNumbers.keySet()) {
       int cnt = 0;
@@ -532,7 +528,7 @@ public abstract class BExpressionContext implements IByteArrayUnifier {
       }
 
       // unknown name, create
-      num = Integer.valueOf(lookupValues.size());
+      num = lookupValues.size();
       lookupNumbers.put(name, num);
       lookupNames.add(name);
       lookupValues.add(new BExpressionLookupValue[]{new BExpressionLookupValue("")
@@ -819,7 +815,7 @@ public abstract class BExpressionContext implements IByteArrayUnifier {
   private List<BExpression> _parseFile(File file) throws Exception {
     _br = new BufferedReader(new FileReader(file));
     _readerDone = false;
-    List<BExpression> result = new ArrayList<BExpression>();
+    List<BExpression> result = new ArrayList<>();
     for (; ; ) {
       BExpression exp = BExpression.parse(this, 0);
       if (exp == null) break;
@@ -859,7 +855,7 @@ public abstract class BExpressionContext implements IByteArrayUnifier {
     Integer num = variableNumbers.get(name);
     if (num == null) {
       if (create) {
-        num = Integer.valueOf(variableNumbers.size());
+        num = variableNumbers.size();
         variableNumbers.put(name, num);
       } else {
         return -1;

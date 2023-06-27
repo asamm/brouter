@@ -178,21 +178,24 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
       if (wplist.size() < 10) {
         SuspectManager.nearRecentWps.add(wplist);
       }
+      int engineMode = 0;
       for (Map.Entry<String, String> e : params.entrySet()) {
-        if ("timode".equals(e.getKey())) {
+        if ("engineMode".equals(e.getKey())) {
+          engineMode = Integer.parseInt(e.getValue());
+        } else if ("timode".equals(e.getKey())) {
           rc.turnInstructionMode = Integer.parseInt(e.getValue());
         } else if ("heading".equals(e.getKey())) {
-          rc.startDirection = Integer.valueOf(Integer.parseInt(e.getValue()));
+          rc.startDirection = Integer.parseInt(e.getValue());
           rc.forceUseStartDirection = true;
         } else if (e.getKey().startsWith("profile:")) {
           if (rc.keyValues == null) {
-            rc.keyValues = new HashMap<String, String>();
+            rc.keyValues = new HashMap<>();
           }
           rc.keyValues.put(e.getKey().substring(8), e.getValue());
         } else if (e.getKey().equals("straight")) {
           String[] sa = e.getValue().split(",");
           for (int i = 0; i < sa.length; i++) {
-            int v = Integer.valueOf(sa[i]);
+            int v = Integer.parseInt(sa[i]);
             if (wplist.size() > v) wplist.get(v).direct = true;
           }
         }
@@ -210,7 +213,7 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
         wptCatchRange = RoutingEngine.MAXIMUM_MAX_DIST_WPT_NODE;
 
       rc.waypointCatchingRange = wptCatchRange;
-      cr = new RoutingEngine(null, null, serviceContext.segmentDir, wplist, rc);
+      cr = new RoutingEngine(null, null, serviceContext.segmentDir, wplist, rc, engineMode);
       cr.quite = true;
       cr.doRun(maxRunningTime);
 
@@ -224,8 +227,7 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
         String headers = encodings == null || encodings.indexOf("gzip") < 0 ? null : "Content-Encoding: gzip\n";
         writeHttpHeader(bw, handler.getMimeType(), handler.getFileName(), headers, HTTP_STATUS_OK);
         if (track != null) {
-          if (headers != null) // compressed
-          {
+          if (headers != null) { // compressed
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             Writer w = new OutputStreamWriter(new GZIPOutputStream(baos), "UTF-8");
             w.write(handler.formatTrack(track));
@@ -295,7 +297,7 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
 
     ProfileCache.setSize(2 * maxthreads);
 
-    PriorityQueue<RouteServer> threadQueue = new PriorityQueue<RouteServer>();
+    PriorityQueue<RouteServer> threadQueue = new PriorityQueue<>();
 
     ServerSocket serverSocket = args.length > 5 ? new ServerSocket(Integer.parseInt(args[3]), 100, InetAddress.getByName(args[5])) : new ServerSocket(Integer.parseInt(args[3]));
 
@@ -360,7 +362,7 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
 
 
   private static Map<String, String> getUrlParams(String url) throws UnsupportedEncodingException {
-    HashMap<String, String> params = new HashMap<String, String>();
+    HashMap<String, String> params = new HashMap<>();
     String decoded = URLDecoder.decode(url, "UTF-8");
     StringTokenizer tk = new StringTokenizer(decoded, "?&");
     while (tk.hasMoreTokens()) {

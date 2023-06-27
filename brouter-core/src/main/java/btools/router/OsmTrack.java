@@ -36,8 +36,8 @@ import btools.util.FrozenLongMap;
 import btools.util.StringUtils;
 
 public final class OsmTrack {
-  final public static String version = "1.6.3";
-  final public static String versionDate = "21122021";
+  final public static String version = "1.7.0";
+  final public static String versionDate = "29042023";
 
   // csv-header-line
   private static final String MESSAGES_HEADER = "Longitude\tLatitude\tElevation\tDistance\tCostPerKm\tElevCost\tTurnCost\tNodeCost\tInitialCost\tWayTags\tNodeTags\tTime\tEnergy";
@@ -53,14 +53,14 @@ public final class OsmTrack {
 
   public Map<String, String> params;
 
-  public List<OsmNodeNamed> pois = new ArrayList<OsmNodeNamed>();
+  public List<OsmNodeNamed> pois = new ArrayList<>();
 
   public static class OsmPathElementHolder {
     public OsmPathElement node;
     public OsmPathElementHolder nextHolder;
   }
 
-  public List<OsmPathElement> nodes = new ArrayList<OsmPathElement>();
+  public List<OsmPathElement> nodes = new ArrayList<>();
 
   private CompactLongMap<OsmPathElementHolder> nodesMap;
 
@@ -82,7 +82,7 @@ public final class OsmTrack {
 
   public void registerDetourForId(long id, OsmPathElement detour) {
     if (detourMap == null) {
-      detourMap = new CompactLongMap<OsmPathElementHolder>();
+      detourMap = new CompactLongMap<>();
     }
     OsmPathElementHolder nh = new OsmPathElementHolder();
     nh.node = detour;
@@ -98,12 +98,12 @@ public final class OsmTrack {
   }
 
   public void copyDetours(OsmTrack source) {
-    detourMap = source.detourMap == null ? null : new FrozenLongMap<OsmPathElementHolder>(source.detourMap);
+    detourMap = source.detourMap == null ? null : new FrozenLongMap<>(source.detourMap);
   }
 
   public void addDetours(OsmTrack source) {
     if (detourMap != null) {
-      CompactLongMap<OsmPathElementHolder> tmpDetourMap = new CompactLongMap<OsmPathElementHolder>();
+      CompactLongMap<OsmPathElementHolder> tmpDetourMap = new CompactLongMap<>();
 
       List oldlist = ((FrozenLongMap) detourMap).getValueList();
       long[] oldidlist = ((FrozenLongMap) detourMap).getKeyArray();
@@ -124,7 +124,7 @@ public final class OsmTrack {
           }
         }
       }
-      detourMap = new FrozenLongMap<OsmPathElementHolder>(tmpDetourMap);
+      detourMap = new FrozenLongMap<>(tmpDetourMap);
     }
   }
 
@@ -132,7 +132,7 @@ public final class OsmTrack {
 
   public void appendDetours(OsmTrack source) {
     if (detourMap == null) {
-      detourMap = source.detourMap == null ? null : new CompactLongMap<OsmPathElementHolder>();
+      detourMap = source.detourMap == null ? null : new CompactLongMap<>();
     }
     if (source.detourMap != null) {
       int pos = nodes.size() - source.nodes.size() + 1;
@@ -160,7 +160,7 @@ public final class OsmTrack {
   }
 
   public void buildMap() {
-    nodesMap = new CompactLongMap<OsmPathElementHolder>();
+    nodesMap = new CompactLongMap<>();
     for (OsmPathElement node : nodes) {
       long id = node.getIdFromPos();
       OsmPathElementHolder nh = new OsmPathElementHolder();
@@ -175,11 +175,11 @@ public final class OsmTrack {
         nodesMap.fastPut(id, nh);
       }
     }
-    nodesMap = new FrozenLongMap<OsmPathElementHolder>(nodesMap);
+    nodesMap = new FrozenLongMap<>(nodesMap);
   }
 
   private List<String> aggregateMessages() {
-    ArrayList<String> res = new ArrayList<String>();
+    ArrayList<String> res = new ArrayList<>();
     MessageData current = null;
     for (OsmPathElement n : nodes) {
       if (n.message != null && n.message.wayKeyValues != null) {
@@ -201,7 +201,7 @@ public final class OsmTrack {
   }
 
   private List<String> aggregateSpeedProfile() {
-    ArrayList<String> res = new ArrayList<String>();
+    ArrayList<String> res = new ArrayList<>();
     int vmax = -1;
     int vmaxe = -1;
     int vmin = -1;
@@ -350,8 +350,10 @@ public final class OsmTrack {
     float t0 = ourSize > 0 ? nodes.get(ourSize - 1).getTime() : 0;
     float e0 = ourSize > 0 ? nodes.get(ourSize - 1).getEnergy() : 0;
     for (i = 0; i < t.nodes.size(); i++) {
+      OsmPathElement e = t.nodes.get(i);
+      if (i == 0 && ourSize > 0 && nodes.get(ourSize - 1).getSElev() == Short.MIN_VALUE)
+        nodes.get(ourSize - 1).setSElev(e.getSElev());
       if (i > 0 || ourSize == 0) {
-        OsmPathElement e = t.nodes.get(i);
         e.setTime(e.getTime() + t0);
         e.setEnergy(e.getEnergy() + e0);
         nodes.add(e);
@@ -431,8 +433,7 @@ public final class OsmTrack {
       }
     }
 
-    if (turnInstructionMode == 4) // comment style
-    {
+    if (turnInstructionMode == 4) { // comment style
       sb.append("<!-- $transport-mode$").append(voiceHints.getTransportMode()).append("$ -->\n");
       sb.append("<!--          cmd    idx        lon        lat d2next  geometry -->\n");
       sb.append("<!-- $turn-instruction-start$\n");
@@ -475,8 +476,7 @@ public final class OsmTrack {
       sb.append("  </extensions>\n");
       sb.append(" </metadata>\n");
     }
-    if (turnInstructionMode == 3 || turnInstructionMode == 8) // osmand style, cruiser
-    {
+    if (turnInstructionMode == 3 || turnInstructionMode == 8) { // osmand style, cruiser
       float lastRteTime = 0;
 
       sb.append(" <rte>\n");
@@ -488,8 +488,7 @@ public final class OsmTrack {
         first.append("  <rtept lat=\"").append(formatILat(nodes.get(0).getILat())).append("\" lon=\"")
           .append(formatILon(nodes.get(0).getILon())).append("\">\n")
           .append("   <desc>start</desc>\n   <extensions>\n");
-        if (rteTime != lastRteTime) // add timing only if available
-        {
+        if (rteTime != lastRteTime) { // add timing only if available
           double t = rteTime - lastRteTime;
           first.append("    <time>").append("" + (int) (t + 0.5)).append("</time>\n");
           lastRteTime = rteTime;
@@ -516,8 +515,7 @@ public final class OsmTrack {
 
         rteTime = getVoiceHintTime(i + 1);
 
-        if (rteTime != lastRteTime) // add timing only if available
-        {
+        if (rteTime != lastRteTime) { // add timing only if available
           double t = rteTime - lastRteTime;
           sb.append("    <time>").append("" + (int) (t + 0.5)).append("</time>\n");
           lastRteTime = rteTime;
@@ -536,8 +534,7 @@ public final class OsmTrack {
       sb.append("</rte>\n");
     }
 
-    if (turnInstructionMode == 7) // old locus style
-    {
+    if (turnInstructionMode == 7) { // old locus style
       float lastRteTime = getVoiceHintTime(0);
 
       for (int i = 0; i < voiceHints.list.size(); i++) {
@@ -548,8 +545,7 @@ public final class OsmTrack {
           .append("<name>").append(hint.getMessageString()).append("</name>")
           .append("<extensions><locus:rteDistance>").append("" + hint.distanceToNext).append("</locus:rteDistance>");
         float rteTime = getVoiceHintTime(i + 1);
-        if (rteTime != lastRteTime) // add timing only if available
-        {
+        if (rteTime != lastRteTime) { // add timing only if available
           double t = rteTime - lastRteTime;
           double speed = hint.distanceToNext / t;
           sb.append("<locus:rteTime>").append("" + t).append("</locus:rteTime>")
@@ -560,8 +556,7 @@ public final class OsmTrack {
           .append("</wpt>\n");
       }
     }
-    if (turnInstructionMode == 5) // gpsies style
-    {
+    if (turnInstructionMode == 5) { // gpsies style
       for (VoiceHint hint : voiceHints.list) {
         sb.append(" <wpt lon=\"").append(formatILon(hint.ilon)).append("\" lat=\"")
           .append(formatILat(hint.ilat)).append("\">")
@@ -572,8 +567,7 @@ public final class OsmTrack {
       }
     }
 
-    if (turnInstructionMode == 6) // orux style
-    {
+    if (turnInstructionMode == 6) { // orux style
       for (VoiceHint hint : voiceHints.list) {
         sb.append(" <wpt lat=\"").append(formatILat(hint.ilat)).append("\" lon=\"")
           .append(formatILon(hint.ilon)).append("\">")
@@ -613,7 +607,10 @@ public final class OsmTrack {
       }
     }
     sb.append(" <trk>\n");
-    if (turnInstructionMode == 9) { // brouter style
+    if (turnInstructionMode == 9
+      || turnInstructionMode == 2
+      || turnInstructionMode == 8
+      || turnInstructionMode == 4) { // Locus, comment, cruise, brouter style
       sb.append("  <src>").append(name).append("</src>\n");
       sb.append("  <type>").append(voiceHints.getTransportMode()).append("</type>\n");
     } else {
@@ -644,14 +641,19 @@ public final class OsmTrack {
       if (showTime) {
         sele += "<time>" + getFormattedTime3(n.getTime()) + "</time>";
       }
-
+      if (turnInstructionMode == 8) {
+        if (mwpt != null &&
+          !mwpt.name.startsWith("via") && !mwpt.name.startsWith("from") && !mwpt.name.startsWith("to")) {
+          sele += "<name>" + mwpt.name + "</name>";
+        }
+      }
       boolean bNeedHeader = false;
       if (turnInstructionMode == 9) { // trkpt/sym style
 
         if (hint != null) {
 
           if (mwpt != null &&
-            !mwpt.name.startsWith("via") && !mwpt.name.startsWith("from") && !mwpt.name.startsWith("end")) {
+            !mwpt.name.startsWith("via") && !mwpt.name.startsWith("from") && !mwpt.name.startsWith("to")) {
             sele += "<name>" + mwpt.name + "</name>";
           }
           sele += "<desc>" + hint.getCruiserMessageString() + "</desc>";
@@ -741,17 +743,23 @@ public final class OsmTrack {
       if (turnInstructionMode == 2) { // locus style new
         if (hint != null) {
           if (mwpt != null) {
+            if (!mwpt.name.startsWith("via") && !mwpt.name.startsWith("from") && !mwpt.name.startsWith("to")) {
+              sele += "<name>" + mwpt.name + "</name>";
+            }
             if (mwpt.direct && bNextDirect) {
               sele += "<src>" + hint.getLocusSymbolString() + "</src><sym>pass_place</sym><type>Shaping</type>";
               // bNextDirect = false;
             } else if (mwpt.direct) {
-              sele += "<sym>pass_place</sym><type>Shaping</type>";
+              if (idx == 0)
+                sele += "<sym>pass_place</sym><type>Via</type>";
+              else
+                sele += "<sym>pass_place</sym><type>Shaping</type>";
               bNextDirect = true;
             } else if (bNextDirect) {
               sele += "<src>beeline</src><sym>" + hint.getLocusSymbolString() + "</sym><type>Shaping</type>";
               bNextDirect = false;
             } else {
-              sele += "<sym>" + hint.getLocusSymbolString() + "</sym>";
+              sele += "<sym>" + hint.getLocusSymbolString() + "</sym><type>Via</type>";
             }
           } else {
             sele += "<sym>" + hint.getLocusSymbolString() + "</sym>";
@@ -787,28 +795,27 @@ public final class OsmTrack {
 
           } else {
             if (mwpt != null) {
-              if (sele.contains("sym") &&
-                !sele.contains("name") &&
-                !mwpt.name.startsWith("via") &&
-                !mwpt.name.startsWith("from") &&
-                !mwpt.name.startsWith("to")) {
-                int pos = sele.indexOf("<sym");
-                if (pos != -1)
-                  sele = sele.substring(0, pos) + "<name>" + mwpt.name + "</name>" + sele.substring(pos) + "<type>Via</type>";
-              } else if (sele.contains("sym") && mwpt.name.startsWith("via")) {
-                sele += "<type>Via</type>";
-              } else if (mwpt.direct && bNextDirect) {
+              if (!mwpt.name.startsWith("via") && !mwpt.name.startsWith("from") && !mwpt.name.startsWith("to")) {
+                sele += "<name>" + mwpt.name + "</name>";
+              }
+              if (mwpt.direct && bNextDirect) {
                 sele += "<src>beeline</src><sym>pass_place</sym><type>Shaping</type>";
               } else if (mwpt.direct) {
-                sele += "<sym>pass_place</sym><type>Shaping</type>";
+                if (idx == 0)
+                  sele += "<sym>pass_place</sym><type>Via</type>";
+                else
+                  sele += "<sym>pass_place</sym><type>Shaping</type>";
                 bNextDirect = true;
+              } else if (bNextDirect) {
+                sele += "<src>beeline</src><sym>pass_place</sym><type>Shaping</type>";
+                bNextDirect = false;
               } else if (mwpt.name.startsWith("via") ||
                 mwpt.name.startsWith("from") ||
                 mwpt.name.startsWith("to")) {
                 if (bNextDirect) {
                   sele += "<src>beeline</src><sym>pass_place</sym><type>Shaping</type>";
                 } else {
-                  sele += "<sym>pass_place</sym><type>Shaping</type>";
+                  sele += "<sym>pass_place</sym><type>Via</type>";
                 }
                 bNextDirect = false;
               } else {
@@ -830,6 +837,49 @@ public final class OsmTrack {
     sb.append("</gpx>\n");
 
     return sb.toString();
+  }
+
+  static public String formatAsGpxWaypoint(OsmNodeNamed n) {
+    try {
+      StringWriter sw = new StringWriter(8192);
+      BufferedWriter bw = new BufferedWriter(sw);
+      formatGpxHeader(bw);
+      formatWaypointGpx(bw, n);
+      formatGpxFooter(bw);
+      bw.close();
+      sw.close();
+      return sw.toString();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  static public void formatGpxHeader(BufferedWriter sb) throws IOException {
+    sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+    sb.append("<gpx \n");
+    sb.append(" xmlns=\"http://www.topografix.com/GPX/1/1\" \n");
+    sb.append(" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" \n");
+    sb.append(" xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\" \n");
+    sb.append(" creator=\"BRouter-" + version + "\" version=\"1.1\">\n");
+  }
+
+  static public void formatGpxFooter(BufferedWriter sb) throws IOException {
+    sb.append("</gpx>\n");
+  }
+
+  static public void formatWaypointGpx(BufferedWriter sb, OsmNodeNamed n) throws IOException {
+    sb.append(" <wpt lon=\"").append(formatILon(n.ilon)).append("\" lat=\"")
+      .append(formatILat(n.ilat)).append("\">");
+    if (n.getSElev() != Short.MIN_VALUE) {
+      sb.append("<ele>").append("" + n.getElev()).append("</ele>");
+    }
+    if (n.name != null) {
+      sb.append("<name>").append(StringUtils.escapeXml10(n.name)).append("</name>");
+    }
+    if (n.nodeDescription != null) {
+      sb.append("<desc>").append("hat desc").append("</desc>");
+    }
+    sb.append("</wpt>\n");
   }
 
   public void writeKml(String filename) throws Exception {
@@ -956,8 +1006,7 @@ public final class OsmTrack {
         sb.append(',').append((int) hint.angle);
 
         // not always include geometry because longer and only needed for comment style
-        if (turnInstructionMode == 4) // comment style
-        {
+        if (turnInstructionMode == 4) { // comment style
           sb.append(",\"").append(hint.formatGeometry()).append("\"");
         }
 
@@ -966,8 +1015,7 @@ public final class OsmTrack {
       sb.deleteCharAt(sb.lastIndexOf(","));
       sb.append("        ],\n");
     }
-    if (showSpeedProfile) // set in profile
-    {
+    if (showSpeedProfile) { // set in profile
       List<String> sp = aggregateSpeedProfile();
       if (sp.size() > 0) {
         sb.append("        \"speedprofile\": [\n");
@@ -1018,8 +1066,7 @@ public final class OsmTrack {
     OsmPathElement nn = null;
     for (OsmPathElement n : nodes) {
       String sele = n.getSElev() == Short.MIN_VALUE ? "" : ", " + n.getElev();
-      if (showspeed) // hack: show speed instead of elevation
-      {
+      if (showspeed) { // hack: show speed instead of elevation
         double speed = 0;
         if (nn != null) {
           int dist = n.calcDistance(nn);
@@ -1285,7 +1332,7 @@ public final class OsmTrack {
     i = 0;
 
     node = nodes.get(nodeNr);
-    List<VoiceHint> inputs = new ArrayList<VoiceHint>();
+    List<VoiceHint> inputs = new ArrayList<>();
     while (node != null) {
       if (node.origin != null) {
         VoiceHint input = new VoiceHint();

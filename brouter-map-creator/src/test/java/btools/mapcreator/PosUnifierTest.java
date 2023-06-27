@@ -69,7 +69,7 @@ public class PosUnifierTest {
   // ilon = (int)( ( lon + 180. )*1000000. + 0.5);
   //
 
-  private final List<Coord> coords = new ArrayList<Coord>();
+  private final List<Coord> coords = new ArrayList();
 
   private void addCases() {
 

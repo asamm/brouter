@@ -55,11 +55,12 @@ public final class VoiceHintProcessor {
    * @return voice hints, in forward order
    */
   public List<VoiceHint> process(List<VoiceHint> inputs) {
-    List<VoiceHint> results = new ArrayList<VoiceHint>();
+    List<VoiceHint> results = new ArrayList<>();
     double distance = 0.;
     float roundAboutTurnAngle = 0.f; // sums up angles in roundabout
 
     int roundaboutExit = 0;
+    int roundaboudStartIdx = -1;
 
     for (int hintIdx = 0; hintIdx < inputs.size(); hintIdx++) {
       VoiceHint input = inputs.get(hintIdx);
@@ -77,7 +78,8 @@ public final class VoiceHintProcessor {
       boolean isLink2Highway = input.oldWay.isLinktType() && !input.goodWay.isLinktType();
       boolean isHighway2Link = !input.oldWay.isLinktType() && input.goodWay.isLinktType();
 
-      if (input.oldWay.isRoundabout()) {
+      if (explicitRoundabouts && input.oldWay.isRoundabout()) {
+        if (roundaboudStartIdx == -1) roundaboudStartIdx = hintIdx;
         roundAboutTurnAngle += sumNonConsumedWithinCatchingRange(inputs, hintIdx);
         boolean isExit = roundaboutExit == 0; // exit point is always exit
         if (input.badWays != null) {
@@ -94,13 +96,15 @@ public final class VoiceHintProcessor {
       }
       if (roundaboutExit > 0) {
         roundAboutTurnAngle += sumNonConsumedWithinCatchingRange(inputs, hintIdx);
+        double startTurn = (roundaboudStartIdx != -1 ? inputs.get(roundaboudStartIdx).goodWay.turnangle : turnAngle);
         input.angle = roundAboutTurnAngle;
         input.distanceToNext = distance;
-        input.roundaboutExit = turnAngle < 0 ? -roundaboutExit : roundaboutExit;
+        input.roundaboutExit = startTurn < 0 ? -roundaboutExit : roundaboutExit;
         distance = 0.;
         results.add(input);
         roundAboutTurnAngle = 0.f;
         roundaboutExit = 0;
+        roundaboudStartIdx = -1;
         continue;
       }
       int maxPrioAll = -1; // max prio of all detours
@@ -176,7 +180,7 @@ public final class VoiceHintProcessor {
         input.needsRealTurn = (!unconditionalTrigger) && isStraight;
 
         // check for KR/KL
-        if (Math.abs(turnAngle) > 5.) { // don't use to small angles
+        if (Math.abs(turnAngle) > 5.) { // don't use too small angles
           if (maxAngle < turnAngle && maxAngle > turnAngle - 45.f - (Math.max(turnAngle, 0.f))) {
             input.cmd = VoiceHint.KR;
           }
@@ -196,9 +200,9 @@ public final class VoiceHintProcessor {
     }
 
     // go through the hint list again in reverse order (=travel direction)
-    // and filter out non-signficant hints and hints too close to it's predecessor
+    // and filter out non-significant hints and hints too close to its predecessor
 
-    List<VoiceHint> results2 = new ArrayList<VoiceHint>();
+    List<VoiceHint> results2 = new ArrayList<>();
     int i = results.size();
     while (i > 0) {
       VoiceHint hint = results.get(--i);
@@ -214,8 +218,7 @@ public final class VoiceHintProcessor {
           hint.distanceToNext += dist;
           hint.angle += h2.angle;
           i--;
-          if (h2.isRoundabout()) // if we hit a roundabout, use that as the trigger
-          {
+          if (h2.isRoundabout()) { // if we hit a roundabout, use that as the trigger
             h2.angle = hint.angle;
             hint = h2;
             break;
@@ -238,7 +241,7 @@ public final class VoiceHintProcessor {
   }
 
   public List<VoiceHint> postProcess(List<VoiceHint> inputs, double catchingRange, double minRange) {
-    List<VoiceHint> results = new ArrayList<VoiceHint>();
+    List<VoiceHint> results = new ArrayList<>();
     double distance = 0;
     VoiceHint inputLast = null;
     ArrayList<VoiceHint> tmpList = new ArrayList<>();

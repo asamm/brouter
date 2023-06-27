@@ -24,7 +24,7 @@ public final class BExpressionMetaData {
   public short lookupMinorVersion = -1;
   public short minAppVersion = -1;
 
-  private Map<String, BExpressionContext> listeners = new HashMap<String, BExpressionContext>();
+  private Map<String, BExpressionContext> listeners = new HashMap<>();
 
   public void registerListener(String context, BExpressionContext ctx) {
     listeners.put(context, ctx);
@@ -57,8 +57,7 @@ public final class BExpressionMetaData {
           minAppVersion = Short.parseShort(line.substring(MIN_APP_VERSION_TAG.length()));
           continue;
         }
-        if (line.startsWith(VARLENGTH_TAG)) // tag removed...
-        {
+        if (line.startsWith(VARLENGTH_TAG)) { // tag removed...
           continue;
         }
         if (ctx != null) ctx.parseMetaLine(line);

@@ -56,7 +56,7 @@ public class RecoverFromDeltaTest {
     long start = System.currentTimeMillis();
     ProgressListener listener = new MyProgressListener();
     File[] originalTiles = originalTilesDir.listFiles();
-    List<String> errors = new ArrayList<String>();
+    List<String> errors = new ArrayList();
 
     assert originalTiles != null;
     // param
@@ -125,7 +125,7 @@ public class RecoverFromDeltaTest {
     initResources();
 
     ProgressListener listener = new MyProgressListener();
-    List<String> errors = new ArrayList<String>();
+    List<String> errors = new ArrayList();
 
     File[] originalTiles = originalTilesDir.listFiles();
 

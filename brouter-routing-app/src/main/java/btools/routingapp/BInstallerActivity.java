@@ -33,7 +33,6 @@ import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
-import androidx.work.WorkRequest;
 
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -92,8 +91,7 @@ public class BInstallerActivity extends AppCompatActivity {
       if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.POST_NOTIFICATIONS)
         == PackageManager.PERMISSION_GRANTED) {
         // nothing to do
-      }
-      if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+      } else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
         //
       } else {
         // You can directly ask for the permission.
@@ -222,14 +220,14 @@ public class BInstallerActivity extends AppCompatActivity {
       .setRequiredNetworkType(NetworkType.CONNECTED)
       .build();
 
-    WorkRequest downloadWorkRequest =
+    OneTimeWorkRequest downloadWorkRequest =
       new OneTimeWorkRequest.Builder(DownloadWorker.class)
         .setInputData(inputData)
         .setConstraints(constraints)
         .build();
 
     WorkManager workManager = WorkManager.getInstance(getApplicationContext());
-    workManager.enqueueUniqueWork(DownloadWorker.WORKER_NAME, ExistingWorkPolicy.KEEP, (OneTimeWorkRequest) downloadWorkRequest);
+    workManager.enqueueUniqueWork(DownloadWorker.WORKER_NAME, ExistingWorkPolicy.KEEP, downloadWorkRequest);
 
     try {
       WorkInfo wi = WorkManager.getInstance(getApplicationContext()).getWorkInfoById(downloadWorkRequest.getId()).get();
@@ -256,7 +254,6 @@ public class BInstallerActivity extends AppCompatActivity {
   private void startObserver(WorkInfo workInfo) {
     if (workInfo != null) {
       if (workInfo.getState() == WorkInfo.State.ENQUEUED || workInfo.getState() == WorkInfo.State.BLOCKED) {
-        Log.d("worker", "cancel " + workInfo.getState());
         //WorkManager.getInstance(getApplicationContext()).cancelWorkById(downloadWorkRequest.getId());
       }
 
@@ -265,6 +262,9 @@ public class BInstallerActivity extends AppCompatActivity {
         mProgressIndicator.hide();
         mProgressIndicator.setIndeterminate(true);
         mProgressIndicator.show();
+
+        mButtonDownload.setText(getString(R.string.action_cancel));
+        mButtonDownload.setEnabled(true);
       }
 
       if (workInfo.getState() == WorkInfo.State.RUNNING) {
@@ -310,12 +310,17 @@ public class BInstallerActivity extends AppCompatActivity {
           }
         }
 
-        if (error != null && error.startsWith("error new app")) {
+        if (error != null && error.startsWith("Version new app")) {
           showAppUpdate();
         } else if (error != null && error.startsWith("Version error")) {
           showConfirmNextSteps();
         } else if (error != null && error.startsWith("Version diffs")) {
           showConfirmGetDiffs();
+        } else if (error != null) {
+          stopDownload();
+          mBInstallerView.setOnSelectListener(onSelectListener);
+          mBInstallerView.clearAllTilesStatus(MASK_SELECTED_RD5);
+          scanExistingFiles();
         } else {
           mBInstallerView.setOnSelectListener(onSelectListener);
           mBInstallerView.clearAllTilesStatus(MASK_SELECTED_RD5);
@@ -452,10 +457,12 @@ public class BInstallerActivity extends AppCompatActivity {
       if (fileName.endsWith(suffix)) {
         String basename = fileName.substring(0, fileName.length() - suffix.length());
         int tileIndex = tileForBaseName(basename);
-        mBInstallerView.setTileStatus(tileIndex, MASK_INSTALLED_RD5);
+        if (tileIndex != -1) {
+          mBInstallerView.setTileStatus(tileIndex, MASK_INSTALLED_RD5);
 
-        long age = System.currentTimeMillis() - new File(dir, fileName).lastModified();
-        if (age < 10800000) mBInstallerView.setTileStatus(tileIndex, MASK_CURRENT_RD5); // 3 hours
+          long age = System.currentTimeMillis() - new File(dir, fileName).lastModified();
+          if (age < 10800000) mBInstallerView.setTileStatus(tileIndex, MASK_CURRENT_RD5); // 3 hours
+        }
       }
     }
   }
@@ -483,11 +490,11 @@ public class BInstallerActivity extends AppCompatActivity {
   }
 
   private void downloadDiffVersionTiles() {
-    downloadAll(new ArrayList<Integer>(), DownloadWorker.VALUE_SEGMENT_DIFFS);
+    downloadAll(new ArrayList<>(), DownloadWorker.VALUE_SEGMENT_DIFFS);
   }
 
   private void dropDiffVersionTiles() {
-    downloadAll(new ArrayList<Integer>(), DownloadWorker.VALUE_SEGMENT_DROPDIFFS);
+    downloadAll(new ArrayList<>(), DownloadWorker.VALUE_SEGMENT_DROPDIFFS);
   }
 
   private boolean isDownloadRunning(Class<?> serviceClass) {
@@ -522,10 +529,16 @@ public class BInstallerActivity extends AppCompatActivity {
     if (idx < 0) return -1;
     String slon = uname.substring(0, idx);
     String slat = uname.substring(idx + 1);
-    int ilon = slon.charAt(0) == 'W' ? -Integer.parseInt(slon.substring(1)) :
-      (slon.charAt(0) == 'E' ? Integer.parseInt(slon.substring(1)) : -1);
-    int ilat = slat.charAt(0) == 'S' ? -Integer.parseInt(slat.substring(1)) :
-      (slat.charAt(0) == 'N' ? Integer.parseInt(slat.substring(1)) : -1);
+    int ilon = 0;
+    int ilat = 0;
+    try {
+      ilon = slon.charAt(0) == 'W' ? -Integer.parseInt(slon.substring(1)) :
+        (slon.charAt(0) == 'E' ? Integer.parseInt(slon.substring(1)) : -1);
+      ilat = slat.charAt(0) == 'S' ? -Integer.parseInt(slat.substring(1)) :
+        (slat.charAt(0) == 'N' ? Integer.parseInt(slat.substring(1)) : -1);
+    } catch (NumberFormatException e) {
+      return -1;
+    }
     if (ilon < -180 || ilon >= 180 || ilon % 5 != 0) return -1;
     if (ilat < -90 || ilat >= 90 || ilat % 5 != 0) return -1;
     return (ilon + 180) / 5 + 72 * ((ilat + 90) / 5);
