@@ -49,7 +49,7 @@ public class RoutingEngineTest {
 
     File trackFile = new File(workingDir, "paramTrack1.gpx");
     trackFile.deleteOnExit();
-    //Assert.assertTrue("result content mismatch", trackFile.exists());
+    Assert.assertTrue("result content mismatch", trackFile.exists());
   }
 
   private String calcRoute(double flon, double flat, double tlon, double tlat, String trackname, RoutingContext rctx) {
