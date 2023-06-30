@@ -15,7 +15,6 @@
 ##############################################################
 #
 
-
 # bstart /global
 ---context:global
 assign   iswet                  0 # %is_wet% 0 as default, *) flag for weather conditions
@@ -24,7 +23,7 @@ assign   cycleroutes_pref       0.5 # also CRP *)  costfactor penalty for not be
 assign   MTB_factor             0.0 # default 0.0, *)
 assign   smallpaved_factor      0.0 # default 0.0, *)
 assign   avoid_unsafe           0 # 0 as default, gives penalty to mainroad without bike friendly status.
-assign   hills                  1 # 1=default / 0=BRouter default/ 1=+ penalty for uphills >3.0%/ 2=velomobile-like avoiding slopes, 3= simulates ascend/length time equiv.
+assign   hills                  1 # 1=default / 0=BRouter default/ 1=+ penalty for uphills >3.0 perc./ 2=velomobile-like avoiding slopes, 3= simulates ascend/length time equiv.
                                   # 4=valley mode, 5=No-Flats mode
 assign   isbike_for_mainroads   true # default=true / if false then bike friendly tag hints for mainroads are ignored, keeping their high penalties. v2.5.20
 assign   path_preference        0.0 # 0.0 as default, try 20.0 to penalize nonpath ways a/o paved ways
@@ -169,14 +168,8 @@ assign probablyGood or ispaved  and isbike not isunpaved  #probably good surface
 assign turncost  if  ismainroad  then 90    else if ispaved then 60   else 30 
 # Turn cost is based solely on estimation of road speediness and eventual time cost of turning, partially promoting tracks )
 
-assign ismuddy and iswet
-               and ( not surface=gravel|pebblestone )  # ***)
-                   ( or isunpaved ( and surface= and highway=track|path not tracktype=grade1 )  )
-
 assign nosurface or surface= surface=unknown
 assign nosurfacenortracktype and nosurface tracktype=
-assign ishard or ispaved surface=cobblestone|sett|compacted|fine_gravel|gravel|pebblestone  
-assign issoft not or nosurface ishard
 
 # bend /wayvariables
 
@@ -375,12 +368,20 @@ assign not_isbike_penalty   if isbike then 0.0
         switch    highway=service    0.0   0.0
 
 assign wet_penalty    if   not iswet    then 0.0 else
-    switch surface=cobblestone|sett     1.0     switch ispaved                      0.0
-    switch surface=compacted            0.6     switch surface=fine_gravel          0.8
-    switch surface=                     switch not istrack 0.5 switch highway=path  2.0 1.0 
-    switch surface=grass                switch highway=path  2.5 1.5
-    switch surface=ground|earth|unpaved|sand|dirt|mud   switch highway=path 3.5 2.0
-    2.0
+                      if ispaved then 0.0 else
+                      if surface=cobblestone|sett then 1.6 else
+                      if surface=fine_gravel then 1.8 else
+                      if surface=compacted then 1.8 else
+                      if surface=grass then 5.0 else
+                      if surface=ground|earth|unpaved|sand|dirt|mud then 5.0 else
+                      if tracktype=grade1 then 0.4 else
+                      if tracktype=grade2 then 0.6 else
+                      if tracktype=grade3 then 2.4 else
+                      if tracktype=grade4 then 4.4 else
+                      if tracktype=grade5 then 6.4 else
+                      if highway=track|service|unsurfaced then 4.0 else
+                      if highway=path|footway|bridleway then 6.0
+                      else 0.0
     
 # bend /HWclass_bfactor_components
     
