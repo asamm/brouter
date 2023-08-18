@@ -59,7 +59,7 @@ assign   downhillcostvalue      switch equal hills 1 60   switch equal hills 2 8
 assign   Flat_Penalty         if NoFlatMode then 1.5 else 0.0
 
 assign   validForBikes        1
-assign   processUnusedTags    0 # 1 is old Brouter behaviour, 0 is new Brouter default, more efficient, but ignores tags not used by a profile.
+assign   processUnusedTags    1 # 1 is old Brouter behaviour, 0 is new Brouter default, more efficient, but ignores tags not used by a profile. We need all tags for warnings.
                               
 
 # positive smallpaved factor effect subtracts itself from MTB factor effect

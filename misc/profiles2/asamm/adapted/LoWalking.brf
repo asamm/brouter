@@ -105,6 +105,7 @@ assign  SAC_K2_5    add ( multiply ( add SAC_K2_4 1.0 ) SAC_K20 ) -1.0
 assign  SAC_K1_6    add ( multiply ( add SAC_K1_5 1.0 ) SAC_K10 ) -1.0
 assign  SAC_K2_6    add ( multiply ( add SAC_K2_5 1.0 ) SAC_K20 ) -1.0
 
+assign  processUnusedTags 1  # 1 is old Brouter behaviour, 0 is new Brouter default, more efficient, but ignores tags not used by a profile. We need all tags for warnings.
 
 ---context:way   # following code refers to way-tags
 

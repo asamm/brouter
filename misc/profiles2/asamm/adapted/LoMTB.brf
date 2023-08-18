@@ -20,14 +20,17 @@
 ---context:global
 assign   iswet                  0 # %is_wet% 0 as default, *) flag for weather conditions
 assign   turnInstructionMode  = 2 # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style
-assign   cycleroutes_pref       0.2 # also CRP *)  costfactor penalty for not being cycleroute
-assign   MTB_factor             1.6 # default 0.0, *)
-assign   smallpaved_factor      -1.0 # default 0.0, *)
-assign   avoid_unsafe           0 # 0 as default, gives penalty to mainroad without bike friendly status.
+# SET BY Brouter-wrapper
+assign   cycleroutes_pref       0.5 # %cycleroutes_pref% DO NOT USE CLIENT SIDE - SET BY Brouter-wrapper app in 0.8  >  0.5  >  0.2 for difficulty param [-1.0, 1.0]
+# SET BY Brouter-wrapper
+assign   MTB_factor             1.0 # %MTB_factor% DO NOT USE CLIENT SIDE - SET BY Brouter-wrapper app in 0.2  >  1.0  >  1.8 for difficulty param [-1.0, 1.0]
+assign   smallpaved_factor      0.0 # default 0.0, *)
+assign   avoid_unsafe           1 # 0 as default, gives penalty to mainroad without bike friendly status.
 assign   hills                  1 # 1=default / 0=BRouter default/ 1=+ penalty for uphills >3.0 perc. / 2=velomobile-like avoiding slopes, 3= simulates ascend/length time equiv.
                                   # 4=valley mode, 5=No-Flats mode
 assign   isbike_for_mainroads   false # default=true / if false then bike friendly tag hints for mainroads are ignored, keeping their high penalties. v2.5.20
-assign   path_preference        2.0 # 0.0 as default, try 20.0 to penalize nonpath ways a/o paved ways
+# SET BY Brouter-wrapper
+assign   path_preference        8.0 # %path_preference% DO NOT USE CLIENT SIDE - SET BY Brouter-wrapper app in 2.0  >  8.0  >  14.0 for difficulty param [-1.0, 1.0]
 
 assign   consider_elevation     1 # 1 as default
 assign   consider_smoothness    1 # 1 as default
@@ -60,7 +63,7 @@ assign   downhillcostvalue      switch equal hills 1 60   switch equal hills 2 8
 assign   Flat_Penalty         if NoFlatMode then 1.5 else 0.0
 
 assign   validForBikes        1
-assign   processUnusedTags    0 # 1 is old Brouter behaviour, 0 is new Brouter default, more efficient, but ignores tags not used by a profile.
+assign   processUnusedTags 1  # 1 is old Brouter behaviour, 0 is new Brouter default, more efficient, but ignores tags not used by a profile. We need all tags for warnings.
                               
 
 # positive smallpaved factor effect subtracts itself from MTB factor effect

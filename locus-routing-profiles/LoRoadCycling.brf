@@ -30,7 +30,6 @@ assign ignore_cycleroutes       = false  # Set to true for better elevation resu
 assign stick_to_cycleroutes     = false  # Set to true to just follow cycleroutes | boolean
 assign avoid_unsafe             = false  # Set to true to avoid standard highways | boolean
 assign considerTurnRestrictions = false  # Set to true to take turn restrictions into account | boolean
-assign processUnusedTags        = false  # Set to true to output unused tags in data tab | boolean
 assign consider_traffic         = false  # Set to true to avoid traffic | boolean
 assign allow_motorways          = false  # Set to true to allow motorways (useful in Asia / Oceania for example) | boolean
 
@@ -56,6 +55,7 @@ assign turnInstructionMode          = 2     # Mode for the generated turn instru
 assign turnInstructionCatchingRange = 40    # Within this distance (in m) several turning instructions are combined into one and the turning angles are better approximated to the general direction | number
 assign turnInstructionRoundabouts   = true  # Set to "false" to avoid generating special turning instructions for roundabouts | boolean
 
+assign processUnusedTags 1  # 1 is old Brouter behaviour, 0 is new Brouter default, more efficient, but ignores tags not used by a profile. We need all tags for warnings.
 
 ---context:way   # following code refers to way-tags
 

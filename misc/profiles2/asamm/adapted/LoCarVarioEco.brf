@@ -36,6 +36,7 @@ assign turnInstructionMode          = 2     # Mode for the generated turn instru
 # Technical parameters
 assign pass1coefficient    = 1.3
 
+assign processUnusedTags    1 # 1 is old Brouter behaviour, 0 is new Brouter default, more efficient, but ignores tags not used by a profile. We need all tags for warnings.
 
 ---context:way   # following code refers to way-tags
 

@@ -34,6 +34,8 @@ assign downhillcutoff = 1.5
 assign uphillcost = 58
 assign uphillcutoff = 1.5
 
+assign   processUnusedTags 1  # 1 is old Brouter behaviour, 0 is new Brouter default, more efficient, but ignores tags not used by a profile. We need all tags for warnings.
+
 ---context:way   # following code refers to way-tags
 
 assign turncost = 0
