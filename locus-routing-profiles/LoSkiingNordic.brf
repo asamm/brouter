@@ -26,6 +26,7 @@ assign validForFoot = true
 assign validForCars = false
 
 assign turnInstructionMode = 2 # locus-style
+assign turnInstructionCatchingRange = 10
 
 # the elevation parameters
 

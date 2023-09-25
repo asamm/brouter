@@ -52,7 +52,7 @@ assign bikerPower = 100    # Average power (in W) provided by the biker, for tra
 
 # Turn instructions settings
 assign turnInstructionMode          = 2     # Mode for the generated turn instructions | [0=none, 1=auto-choose, 2=locus-style, 3=osmand-style, 4=comment-style, 5=gpsies-style, 6=orux-style]
-assign turnInstructionCatchingRange = 40    # Within this distance (in m) several turning instructions are combined into one and the turning angles are better approximated to the general direction | number
+assign turnInstructionCatchingRange = 20    # Within this distance (in m) several turning instructions are combined into one and the turning angles are better approximated to the general direction | number
 assign turnInstructionRoundabouts   = true  # Set to "false" to avoid generating special turning instructions for roundabouts | boolean
 
 assign processUnusedTags 1  # 1 is old Brouter behaviour, 0 is new Brouter default, more efficient, but ignores tags not used by a profile. We need all tags for warnings.

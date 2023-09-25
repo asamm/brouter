@@ -32,6 +32,7 @@ assign p_standby        = 250    # Watt | number
 
 # Turn instructions settings
 assign turnInstructionMode          = 2     # Mode for the generated turn instructions | [0=none, 1=auto-choose, 2=locus-style, 3=osmand-style, 4=comment-style, 5=gpsies-style, 6=orux-style]
+assign turnInstructionCatchingRange = 20
 
 # Technical parameters
 assign pass1coefficient    = 1.3
