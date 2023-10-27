@@ -49,14 +49,14 @@ assign   NoFlatMode             equal hills 5
 assign   ValleyMode             equal hills 4
 assign   originalisbike         false
 # SET BY Brouter-wrapper
-assign   uphillCostAdjusted = 380 # %uphill_cost_adjusted% DO NOT USE CLIENT SIDE - SET BY Brouter-wrapper app in 680 > 380 > 80 for difficulty param [-1.0, 1.0]
+assign   uphillCostAdjusted = 160 # %uphill_cost_adjusted% DO NOT USE CLIENT SIDE - SET BY Brouter-wrapper app in 260 > 160 > 60 for difficulty param [-1.0, 1.0]
 assign   uphillcostvalue        switch equal hills 1 uphillCostAdjusted   switch equal hills 2 80
                                 switch equal hills 3 60   switch ValleyMode 150 switch NoFlatMode 0     0 
-assign   uphillcutoffvalue      switch equal hills 1 3.0  switch equal hills 2 1.0
+assign   uphillcutoffvalue      switch equal hills 1 4.2  switch equal hills 2 1.0
                                 switch equal hills 3 0.5  switch ValleyMode 1.5 switch NoFlatMode 1.5   1.5 
-assign   downhillcostvalue      switch equal hills 1 80   switch equal hills 2 80
+assign   downhillcostvalue      switch equal hills 1 60   switch equal hills 2 80
                                 switch equal hills 3 0    switch ValleyMode 150 switch NoFlatMode 0   0  
-assign   downhillcutoffvalue    switch equal hills 1 1.5  switch equal hills 2 0.5
+assign   downhillcutoffvalue    switch equal hills 1 2.2  switch equal hills 2 0.5
                                 switch equal hills 3 1.5  switch ValleyMode 1.5 switch NoFlatMode 1.5  1.5 
 
 assign   Flat_Penalty         if NoFlatMode then 1.5 else 0.0
@@ -74,15 +74,16 @@ assign   abs_smallpaved_factor       multiply ( switch positive_smallpaved_facto
 assign   MTB_hillcostfactor   multiply 0.3333 Hill_factor 
                   # It changes hillcosts to be 0.0 at Hill_factor = 3.0 and twice at -3.0
                   # Hill_factor 1..-1 leads hillcost to decrease e.g. from 60 to 40 / increase from 60 to 80
-                  
-assign   downhillcost if ( consider_elevation  )  then  ( multiply ( sub 1.0 MTB_hillcostfactor  ) downhillcostvalue ) else 0
-assign   uphillcost   if ( consider_elevation  )  then  ( multiply ( sub 1.0 MTB_hillcostfactor  ) uphillcostvalue ) else 0
-assign   uphillcutoff    if ( consider_elevation ) then (  multiply ( max 0.0 min 1.0 add 1.0 MTB_hillcostfactor  ) uphillcutoffvalue )   else 1.5
-assign   downhillcutoff  if ( consider_elevation ) then (  multiply ( max 0.0 min 1.0 add 1.0 MTB_hillcostfactor  ) downhillcutoffvalue ) else 1.5 
+                
+# simplified from: see comments
+assign   downhillcost if ( consider_elevation  )  then downhillcostvalue else 0 # ( multiply ( sub 1.0 MTB_hillcostfactor  ) downhillcostvalue ) else 0 
+assign   uphillcost   if ( consider_elevation  )  then uphillcostvalue else 0 # ( multiply ( sub 1.0 MTB_hillcostfactor  ) uphillcostvalue ) else 0
+assign   uphillcutoff    if ( consider_elevation ) then uphillcutoffvalue else 1.5 # (  multiply ( max 0.0 min 1.0 add 1.0 MTB_hillcostfactor  ) uphillcutoffvalue )   else 1.5
+assign   downhillcutoff  if ( consider_elevation ) then downhillcutoffvalue else 1.5 # (  multiply ( max 0.0 min 1.0 add 1.0 MTB_hillcostfactor  ) downhillcutoffvalue ) else 1.5 
 
 assign   elevationpenaltybuffer if ValleyMode then 10 else 5   # 5 is trekking default
 assign   elevationmaxbuffer     if ValleyMode then 20 else 10  # 10 is trekking default
-assign   elevationbufferreduce  if ValleyMode then 0.0 else ( multiply 0.333 max uphillcutoff downhillcutoff ) # 0.0 is trekking default
+assign   elevationbufferreduce  if ValleyMode then 0.0 else 0.5  # ( multiply 0.333 max uphillcutoff downhillcutoff ) # 0.0 is trekking default
 
 assign   uphillCFshift     0.0 # experimental shifting of up/downhillcostfactors as alternative way of 
 assign   downhillCFshift   0.0 # prioritizing/penalizing of up/downhills, based on length, not elevation
@@ -243,9 +244,9 @@ assign onewaypenalty =
          else if highway=primary|primary_link               then 50
          else if highway=secondary|secondary_link           then 30
          else if highway=tertiary|tertiary_link             then 20
-         else 7.0   
-         
-       else 0.0   
+         else if highway=residential                        then 20
+         else 20
+       else 0.0
 
 # bend /wayaccess
 

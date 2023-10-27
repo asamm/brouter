@@ -73,10 +73,10 @@ assign caraccess
                                    switch highway=construction              0
                                    switch highway=abandoned                 0
                                    0
-                                   access=yes|permissive|designated|destination
-                            vehicle=yes|designated|destination
-                     motor_vehicle=yes|permissive|designated|destination
-              motorcar=yes|permissive|designated|destination
+                                   access=yes|permissive|designated|destination|unknown
+                            vehicle=yes|designated|destination|unknown
+                     motor_vehicle=yes|permissive|designated|destination|unknown
+              motorcar=yes|permissive|designated|destination|unknown
 
 assign caraccess_destination
        switch motorcar=
@@ -269,10 +269,10 @@ assign caraccess
                      switch vehicle=
                             switch access=
                                    not barrier=gate|swing_gate|bollard|lift_gate|cycle_barrier
-                                   access=yes|permissive|designated|destination
-                            vehicle=yes|permissive|designated|destination
-                     motor_vehicle=yes|permissive|designated|destination
-              motorcar=yes|permissive|designated|destination
+                                   access=yes|permissive|designated|destination|unknown
+                            vehicle=yes|permissive|designated|destination|unknown
+                     motor_vehicle=yes|permissive|designated|destination|unknown
+              motorcar=yes|permissive|designated|destination|unknown
 
 assign initialcost =
        switch and avoid_toll barrier=toll_booth 1000000

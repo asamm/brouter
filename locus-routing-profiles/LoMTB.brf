@@ -244,9 +244,9 @@ assign onewaypenalty =
          else if highway=primary|primary_link               then 50
          else if highway=secondary|secondary_link           then 30
          else if highway=tertiary|tertiary_link             then 20
-         else 7.0   
-         
-       else 0.0   
+         else if highway=residential                        then 20
+         else 20
+       else 0.0
 
 # bend /wayaccess
 

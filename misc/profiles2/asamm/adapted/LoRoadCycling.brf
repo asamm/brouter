@@ -63,7 +63,7 @@ assign any_cycleroute or route_bicycle_icn=yes or route_bicycle_ncn=yes or route
 assign nodeaccessgranted or any_cycleroute lcn=yes
 
 assign ispaved or surface=paved or surface=asphalt or surface=concrete surface=paving_stones
-assign isunpaved not or surface= or ispaved or surface=fine_gravel surface=cobblestone
+assign isunpaved not or surface= or ispaved or surface=unpaved or surface=fine_gravel surface=cobblestone
 
 assign turncost = if junction=roundabout then 0
                   else 90
@@ -135,17 +135,16 @@ assign badoneway =
          else oneway=yes|true|1
        else oneway=-1
 
-assign onewaypenalty =
-       if ( badoneway ) then
-       (
-         if ( cycleway=opposite|opposite_lane|opposite_track ) then 0
-         else if ( oneway:bicycle=no                         ) then 0
-         else if ( highway=primary|primary_link              ) then 50
-         else if ( highway=secondary|secondary_link          ) then 30
-         else if ( highway=tertiary|tertiary_link            ) then 20
-         else 7.0
-       )
-       else 0.0
+assign onewaypenalty = 
+       if ( badoneway ) then 
+         if cycleway=opposite|opposite_lane|opposite_track  then 0
+         else if oneway:bicycle=no                          then 0
+         else if highway=primary|primary_link               then 50
+         else if highway=secondary|secondary_link           then 30
+         else if highway=tertiary|tertiary_link             then 20
+         else if highway=residential                        then 20
+         else 20
+       else 0.0   
 
 # Eventually compute traffic penalty
 assign hascycleway = not
@@ -202,7 +201,7 @@ assign costfactor
   switch or highway=primary highway=primary_link      1.2
   switch or highway=secondary highway=secondary_link  1.1
   switch or highway=tertiary highway=tertiary_link    1.0
-  switch    highway=unclassified                      1.1
+  switch    highway=unclassified                      switch isunpaved 5 1.2
   switch    highway=pedestrian                        10
   switch    highway=steps                             1000
   switch    route=ferry                               5.67
