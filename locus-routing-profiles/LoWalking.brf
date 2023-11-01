@@ -45,7 +45,7 @@ assign   initialcost_value        0 # not used now
 
 #less frequently changed flags
 assign   allow_steps              1  # 1 as default
-assign   allow_ferries            1  # 1 as default
+assign   allow_ferries            true  # true as default, not set as custom param for walking profiles
 assign   cost_of_unknown          2  # 2 as default
 #
 assign   elevationpenaltybuffer     5    # 5 as default

@@ -25,7 +25,7 @@ assign validForBikes = true
 
 # Use the following switches to change behaviour
 assign allow_steps              = true   # Set to false to disallow steps | boolean
-assign allow_ferries            = true   # Set to false to disallow ferries | boolean
+assign allow_ferries            = true   # %allow_ferries% Set to false to disallow ferries | boolean
 assign ignore_cycleroutes       = false  # Set to true for better elevation results | boolean
 assign stick_to_cycleroutes     = false  # Set to true to just follow cycleroutes | boolean
 assign avoid_unsafe             = false  # Set to true to avoid standard highways | boolean
@@ -59,19 +59,22 @@ assign processUnusedTags 1  # 1 is old Brouter behaviour, 0 is new Brouter defau
 
 ---context:way   # following code refers to way-tags
 
-assign any_cycleroute or route_bicycle_icn=yes or route_bicycle_ncn=yes or route_bicycle_rcn=yes route_bicycle_lcn=yes
-assign nodeaccessgranted or any_cycleroute lcn=yes
+assign any_cycleroute or route_bicycle_icn=yes or route_bicycle_ncn=yes or route_bicycle_rcn=yes route_bicycle_lcn=yes 
+assign nodeaccessgranted or any_cycleroute lcn=yes 
 
-assign ispaved or surface=paved or surface=asphalt or surface=concrete surface=paving_stones
-assign isunpaved not or surface= or ispaved or surface=unpaved or surface=fine_gravel surface=cobblestone
+assign ispaved or surface=paved or surface=asphalt or surface=concrete surface=paving_stones 
+assign isunpaved not or surface= or ispaved or surface=unpaved or surface=fine_gravel surface=cobblestone 
 
 assign turncost = if junction=roundabout then 0
                   else 90
+
 assign initialclassifier =
      if route=ferry then 1
      else 0
 
-assign initialcost switch route=ferry 10000 0
+assign initialcost switch route=ferry 
+                            switch allow_ferries 5 10000 
+                            0
 
 #
 # implicit access here just from the motorroad tag
@@ -204,7 +207,7 @@ assign costfactor
   switch    highway=unclassified                      switch isunpaved 5 1.2
   switch    highway=pedestrian                        10
   switch    highway=steps                             1000
-  switch    route=ferry                               5.67
+  switch    route=ferry                               switch allow_ferries 5.67 10000
   switch    highway=bridleway                         5
   switch    highway=cycleway                          1.3
   switch    isresidentialorliving                     switch isunpaved 10 1.2
