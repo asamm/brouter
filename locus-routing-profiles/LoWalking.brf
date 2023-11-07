@@ -22,7 +22,7 @@ assign   shortest_way             0    # 0 as default, duplicate shortest standa
 assign   turnInstructionMode  =   2       # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style
 assign   turnInstructionCatchingRange = 5 # V1.8.5 / default=40, but foot paths may be more distingushed, especially in cities.
 
-assign   iswet                     0       # %is_wet% 0 as default, 1 tries to prevent muddy boots and wet buttocks
+assign   iswet                    false   # %is_wet% false as default, true tries to prevent muddy boots and wet buttocks
 assign   hiking_routes_preference  0.4    # 0.10 as default, Increases cost of non hiking routes by multiplier 1 + hiking_routes_preference
 
 assign   Offroad_factor           0.0 # default 0.0, see ****), see also https://github.com/poutnikl/Brouter-profiles/wiki/Trekking-MTB-Profiles---legend
@@ -128,7 +128,7 @@ assign any_cycleroute =
 assign is_ldhr                  and any_hiking_route not equal 0.0 hiking_routes_preference
 assign nodeaccessgranted        any_hiking_route
 
-# ismuddy addresses potentially bad surface conditions during wet weather ( mud, slickiness of grass)
+# ismuddy addresses potentially bad surface conditions during wet weather (mud, slickiness of grass)
 assign ismuddy      and or isunpaved surface= 
                     and iswet
                     not or surface=gravel surface=pebblestone 
@@ -254,7 +254,7 @@ assign Offroad_factor_for_road
                 
 assign nonpath_penalty =
 if ( equal path_preference 0.0 ) then 0.0                  # nonpath_penalty inactive
-else if not istrack then path_preference                   #istrack = highway=track/path/road/footway
+else if not istrack then path_preference                   # istrack = highway=track/path/road/footway
 else if ispaved then                                      ( multiply path_preference 0.5 )
 else if or ( and not isunpaved not highway=path ) 
            ( tracktype=grade1|grade2 )  then              ( multiply path_preference 0.25 )
@@ -303,7 +303,9 @@ assign rawcostfactor # can be <1.0, is treated later
       ( if iswet then ( switch issidewalk 1.1 1.5 ) else ( switch issidewalk 1.2 2.3 ) )
   else if highway=unclassified                 then
         ( if ismuddy then 1.6 else if iswet then ( switch issidewalk 1.1 1.25 ) else ( switch issidewalk 1.1 1.15 ) ) 
-  
+  else if highway=footway then 1.0
+  else if footway=sidewalk then 1.0
+  else if foot=use_sidepath then 100
   else add cost_of_unknown switch ismuddy 0.5 0.0
   )
   

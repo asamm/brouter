@@ -17,7 +17,7 @@
 #
 
 ---context:global
-assign   iswet                  0 # %is_wet% 0 as default
+assign   iswet                  false # %is_wet% false as default
 assign   turnInstructionMode  = 2 # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style
 assign   turnInstructionCatchingRange = 10
 # SET BY Brouter-wrapper

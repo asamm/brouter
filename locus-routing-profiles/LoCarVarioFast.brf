@@ -26,6 +26,7 @@ assign allow_ferries       = true   # %allow_ferries% | Allow ferries | boolean
 assign avoid_toll = not allow_toll
 assign avoid_unpaved = not allow_unpaved
 assign avoid_motorways = not allow_motorways
+assign avoid_ferries = not allow_ferries
 
 # Kinematic model parameters
 assign vmax             = 130    # Target speed (in km/h) | number
@@ -52,7 +53,8 @@ assign classifier_none        = 1
 assign classifier_ferry       = 2
 
 assign is_avoided_toll_road and  avoid_toll toll=yes
-assign is_avoided_motorway and avoid_motorways highway=motorway|motorway_link
+assign is_avoided_motorway and avoid_motorways highway=motorway|motorway_link 
+assign is_avoided_ferry and avoid_ferries route=ferry 
 
 
 #
@@ -71,7 +73,7 @@ assign caraccess
                                    switch highway=secondary|secondary_link  1
                                    switch highway=tertiary|tertiary_link    1
                                    switch highway=unclassified              1
-                                   switch route=ferry                       switch allow_ferries 1 0
+                                   switch route=ferry                       1
                                    switch isresidentialorliving             1
                                    switch highway=service                   1
                                    switch highway=track                     1
@@ -212,6 +214,7 @@ assign maxspeed_explicit =
 assign maxspeed =
   min if is_avoided_toll_road then 0 else 999
   min if is_avoided_motorway then 0 else 999
+  min if is_avoided_ferry then 0 else 999
   min onewayspeedlimit
   min accessspeedlimit
   min maxspeed_explicit
