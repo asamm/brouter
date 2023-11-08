@@ -268,12 +268,13 @@ else 0.0
         
 assign rawcostfactor # can be <1.0, is treated later
 
-    if shortest_way  then (   add 1 accesspenalty )   else
+  if shortest_way  then (   add 1 accesspenalty )   else
   
   add      nonpath_penalty
   add      accesspenalty
   (
   if    ( and highway= not route=ferry )  then 100000 
+  else if    foot=use_sidepath then 100000
   else if    highway=steps then ( switch allow_steps   ( switch consider_elevation 1.0 3.0 )     100000 )
   else  if    route=ferry    then ( if allow_ferries then 2.34 else 100000 )
   
@@ -306,7 +307,6 @@ assign rawcostfactor # can be <1.0, is treated later
         ( if ismuddy then 1.4 else if iswet then ( switch issidewalk 1.1 1.25 ) else ( switch issidewalk 1.1 1.1 ) ) 
   else if highway=footway then 1.0
   else if footway=sidewalk then 1.0
-  else if foot=use_sidepath then 100
   else add cost_of_unknown switch ismuddy 0.5 0.0
   )
   

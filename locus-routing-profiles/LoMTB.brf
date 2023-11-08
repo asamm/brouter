@@ -191,7 +191,7 @@ else if    ( highway=cycleway )                  then 13
                                                  else 14
 
 assign initialcost
-if route=ferry then 10000
+if route=ferry then 1000
 else if  ( ford=yes )                                       then ford_initialcost_way  
 else if ( highway=motorway|motorway_link|trunk|trunk_link ) then 500
 else if ( highway=primary|primary_link )                    then 120
