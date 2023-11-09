@@ -22,13 +22,12 @@
 
 # Bike profile
 assign validForBikes = true
-
 # Use the following switches to change behaviour
-assign allow_steps              = true   # Set to false to disallow steps | boolean
-assign allow_ferries            = true   # Set to false to disallow ferries | boolean
-assign ignore_cycleroutes       = false  # Set to true for better elevation results | boolean
-assign stick_to_cycleroutes     = false  # Set to true to just follow cycleroutes | boolean
-assign avoid_unsafe             = false  # Set to true to avoid standard highways | boolean
+assign allow_ferries            = true   # %allow_ferries% 
+assign allow_steps              = false  # %allow_steps% 
+assign allow_tunnels            = true   # %allow_tunnels% 
+assign allow_cycleroutes        = true   # %allow_cycleroutes% 
+
 assign considerTurnRestrictions = false  # Set to true to take turn restrictions into account | boolean
 assign consider_traffic         = false  # Set to true to avoid traffic | boolean
 assign allow_motorways          = false  # Set to true to allow motorways (useful in Asia / Oceania for example) | boolean
@@ -44,11 +43,11 @@ assign downhillcost       = if consider_elevation then downhillcost else 0
 assign uphillcost         = if consider_elevation then uphillcost else 0
 
 # Kinematic model parameters (travel time computation)
-assign totalMass  = 90     # Mass (in kg) of the bike + biker, for travel time computation | number
+assign totalMass  = 85     # Mass (in kg) of the bike + biker, for travel time computation | number
 assign maxSpeed   = 45     # Absolute maximum speed (in km/h), for travel time computation | number
 assign S_C_x      = 0.225  # Drag coefficient times the reference area (in m^2), for travel time computation | number
 assign C_r        = 0.01   # Rolling resistance coefficient (dimensionless), for travel time computation | number
-assign bikerPower = 100    # Average power (in W) provided by the biker, for travel time computation | number
+assign bikerPower = 240    # %power% Average power (in W) provided by rider (60 150 240)
 
 # Turn instructions settings
 assign turnInstructionMode          = 2     # Mode for the generated turn instructions | [0=none, 1=auto-choose, 2=locus-style, 3=osmand-style, 4=comment-style, 5=gpsies-style, 6=orux-style]
@@ -59,19 +58,35 @@ assign processUnusedTags 1  # 1 is old Brouter behaviour, 0 is new Brouter defau
 
 ---context:way   # following code refers to way-tags
 
-assign any_cycleroute or route_bicycle_icn=yes or route_bicycle_ncn=yes or route_bicycle_rcn=yes route_bicycle_lcn=yes
-assign nodeaccessgranted or any_cycleroute lcn=yes
+assign any_cycleroute  or route_bicycle_icn=yes or route_bicycle_ncn=yes or route_bicycle_rcn=yes route_bicycle_lcn=yes 
+assign nodeaccessgranted  or any_cycleroute lcn=yes 
+assign small_highway  or highway=cycleway or highway=service or highway=pedestrian or highway=track
+                      or highway=footway or highway=bridleway or highway=path or cycleway=track cycleway=lane
 
-assign ispaved or surface=paved or surface=asphalt or surface=concrete surface=paving_stones
-assign isunpaved not or surface= or ispaved or surface=unpaved or surface=fine_gravel surface=cobblestone
+assign unpavedsurface =  
+       or surface=unpaved 
+       or surface=fine_gravel
+       or surface=gravel
+       or surface=ground
+       or surface=dirt
+       or surface=grass
+       or surface=compacted
+       or surface=earth
+       or surface=sett
+       or surface=clay surface=cobblestone # surface= is false, more important roads (residential, service) are by default unpaved false
+  
+assign isunpavedfortrack = or surface= unpavedsurface  # surface= is true, tracks are by default unpaved
 
 assign turncost = if junction=roundabout then 0
                   else 90
+
 assign initialclassifier =
      if route=ferry then 1
      else 0
 
-assign initialcost switch route=ferry 10000 0
+assign initialcost switch route=ferry 
+                            switch allow_ferries 5 10000 
+                            0
 
 #
 # implicit access here just from the motorroad tag
@@ -119,7 +134,7 @@ assign accesspenalty
        switch bikeaccess
               0
               switch footaccess
-                     6
+                     18
                      10000
 
 #
@@ -196,28 +211,31 @@ assign costfactor
   add max onewaypenalty accesspenalty
   add trafficpenalty
 
+  switch    tunnel=yes                                switch allow_tunnels 1.4 10000
+  switch    highway=steps                             switch allow_steps 40 10000
+  switch    route=ferry                               switch allow_ferries 5.67 10000
   switch or highway=motorway highway=motorway_link    switch allow_motorways 1.5 10000
-  switch or highway=trunk highway=trunk_link          switch allow_motorways 1.5 10
-  switch or highway=primary highway=primary_link      1.2
+  switch or highway=trunk highway=trunk_link          switch allow_motorways 1.5 50
+  switch or highway=primary highway=primary_link      2.2
   switch or highway=secondary highway=secondary_link  1.1
   switch or highway=tertiary highway=tertiary_link    1.0
-  switch    highway=unclassified                      switch isunpaved 5 1.2
-  switch    highway=pedestrian                        10
-  switch    highway=steps                             1000
-  switch    route=ferry                               5.67
+  switch    highway=unclassified                      switch unpavedsurface 5.6 1.2
+  switch    and any_cycleroute small_highway          switch allow_cycleroutes 1.3 16
+  switch    highway=cycleway                          switch allow_cycleroutes 1.3 16  # unlikely case of a cycleway without a cycleroute
   switch    highway=bridleway                         5
-  switch    highway=cycleway                          1.3
-  switch    isresidentialorliving                     switch isunpaved 10 1.2
-  switch    highway=service                           switch isunpaved 10 1.2
-  switch or highway=track or highway=road or highway=path highway=footway
-   switch tracktype=grade1 switch isunpaved 3 1.2
-   switch tracktype=grade2 switch isunpaved 10 3
-   switch tracktype=grade3 10.0
-   switch tracktype=grade4 20.0
-   switch tracktype=grade5 30.0
-   switch or bicycle=designated bicycle_road=yes 2.0
-   switch ispaved 2.0 100.0
-   10.0
+  switch    isresidentialorliving                     switch unpavedsurface 10 1.2
+  switch    highway=service                           switch unpavedsurface 10 1.2
+  switch    highway=pedestrian                        40
+  switch    highway=path                              460
+  switch or highway=track or highway=road highway=footway
+   switch tracktype=grade1 switch isunpavedfortrack 7 1.8
+   switch tracktype=grade2 switch isunpavedfortrack 30 8
+   switch tracktype=grade3 60.0
+   switch tracktype=grade4 180.0
+   switch tracktype=grade5 460.0
+   switch or bicycle=designated bicycle_road=yes switch allow_cycleroutes 2.8 16
+   8.0 
+  20.0
 
 # way priorities used for voice hint generation
 

@@ -17,7 +17,7 @@
 
 # bstart /global
 ---context:global
-assign   iswet                  0 # %is_wet% 0 as default, *) flag for weather conditions
+assign   iswet                  false # %is_wet% false as default
 assign   turnInstructionMode  = 2 # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style
 assign   turnInstructionCatchingRange = 10
 assign   cycleroutes_pref       0.5 # also CRP *)  costfactor penalty for not being cycleroute
@@ -29,11 +29,11 @@ assign   hills                  1 # 1=default / 0=BRouter default/ 1=+ penalty f
 assign   isbike_for_mainroads   true # default=true / if false then bike friendly tag hints for mainroads are ignored, keeping their high penalties. v2.5.20
 assign   path_preference        0.0 # 0.0 as default, try 20.0 to penalize nonpath ways a/o paved ways
 
-assign   consider_elevation     1 # 1 as default
-assign   consider_smoothness    1 # 1 as default
-assign   allow_steps            1 # 1 as default
-assign   allow_ferries          1 # 1 as default
-assign   allow_traffic_penalty  1 # 1 as default
+assign   consider_elevation     1     # 1 as default
+assign   consider_smoothness    1     # 1 as default
+assign   allow_ferries          true  # %allow_ferries% true as default
+assign   allow_steps            true  # %allow_steps% true as default
+assign   allow_traffic_penalty  1     # 1 as default
                                                               
 assign   StrictNOBicycleaccess          0 # 0 allows but penalizes foot only access / 1 forbides foot only access.
 assign   valley_nonflat_multiplier = 2.0

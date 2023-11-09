@@ -17,7 +17,7 @@
 #
 
 ---context:global
-assign   iswet                  0 # %is_wet% 0 as default
+assign   iswet                  false # %is_wet% false as default
 assign   turnInstructionMode  = 2 # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style
 assign   turnInstructionCatchingRange = 10
 # SET BY Brouter-wrapper
@@ -32,11 +32,11 @@ assign   isbike_for_mainroads   false # default=true / if false then bike friend
 # SET BY Brouter-wrapper
 assign   path_preference        10.0 # %path_preference% DO NOT USE CLIENT SIDE - SET BY Brouter-wrapper app in 0.0  >  10.0  >  20.0 for difficulty param [-1.0, 1.0]
 
-assign   consider_elevation     1 # 1 as default
-assign   consider_smoothness    1 # 1 as default
-assign   allow_steps            1 # 1 as default
-assign   allow_ferries          1 # 1 as default
-assign   allow_traffic_penalty  1 # 1 as default
+assign   consider_elevation     1     # 1 as default
+assign   consider_smoothness    1     # 1 as default
+assign   allow_steps            1     # 1 as default
+assign   allow_ferries          true  # %allow_ferries% true as default
+assign   allow_traffic_penalty  1     # 1 as default
                                                               
 assign   StrictNOBicycleaccess       0 # 0 allows but penalizes foot only access / 1 forbides foot only access.
 assign   valley_nonflat_multiplier = 2.0
@@ -191,7 +191,7 @@ else if    ( highway=cycleway )                  then 13
                                                  else 14
 
 assign initialcost
-if route=ferry then 10000
+if route=ferry then 1000
 else if  ( ford=yes )                                       then ford_initialcost_way  
 else if ( highway=motorway|motorway_link|trunk|trunk_link ) then 500
 else if ( highway=primary|primary_link )                    then 120
