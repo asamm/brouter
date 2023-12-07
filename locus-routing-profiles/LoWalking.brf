@@ -164,7 +164,7 @@ assign footaccess     or any_hiking_route
                       switch foot=      defaultaccess    not foot=private|no
                          
 assign noaccess  not defaultaccess
-assign noaccessfootexception  foot=yes|permissive
+assign noaccessfootexception  foot=yes|permissive|designated
 assign accesspenalty  switch  and noaccess not noaccessfootexception  100000 switch footaccess 0 switch bikeaccess 4 100000
 
 #SAC is estimated path difficulty, 
@@ -427,7 +427,7 @@ assign footaccess
                         1
 
 assign noaccess  not defaultaccess
-assign noaccessfootexception  foot=yes|permissive
+assign noaccessfootexception  foot=yes|permissive|designated
 
 assign initialcost  switch  and noaccess not noaccessfootexception  1000000 switch footaccess 0 switch bikeaccess 4 1000000
 

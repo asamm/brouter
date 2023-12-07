@@ -88,43 +88,20 @@ assign initialcost switch route=ferry
                             switch allow_ferries 5 10000 
                             0
 
-#
-# implicit access here just from the motorroad tag
-# (implicit access rules from highway tag handled elsewhere)
-#
-assign defaultaccess
-       switch access=
-              (
-                    if motorroad=yes then false
-                    else if highway=motorway|motorway_link then false
-                    else true
-              )
-              switch or access=private access=no
-                     switch bicycle=permissive|yes true false
-                     true
-
-#
-# calculate logical bike access
-#
+assign defaultaccess =
+       if access= then not motorroad=yes
+       else if access=private|no then switch bicycle=permissive|yes true false
+       else true  
+   
 assign bikeaccess =
-       or any_cycleroute
-          switch bicycle=
-                 switch bicycle_road=yes
-                    true
-                    switch vehicle=
-                           ( if highway=footway then false else defaultaccess )
-                           not vehicle=private|no
-                 not or bicycle=private or bicycle=no bicycle=dismount
+       if bicycle= then ( if vehicle= then defaultaccess else not vehicle=private|no )
+       else switch bicycle=private|no|dismount false true
 
-#
-# calculate logical foot access
-#
 assign footaccess =
-       or bikeaccess
-          or bicycle=dismount
-             switch foot=
-                    defaultaccess
-                    not or foot=private foot=no
+       if bikeaccess then true
+       else if bicycle=dismount then true
+       else if foot= then defaultaccess
+       else not foot=private|no
 
 #
 # if not bike-, but foot-access, just a moderate penalty,

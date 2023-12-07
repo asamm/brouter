@@ -199,10 +199,8 @@ assign defaultaccess =
        else true  
    
 assign bikeaccess =
-       if nodeaccessgranted then true
-       else if hascycleway then true
-       else if bicycle= then   (  if vehicle= then defaultaccess  else not vehicle=private|no   )
-                        else  switch bicycle=private|no|dismount false true
+       if bicycle= then ( if vehicle= then defaultaccess else not vehicle=private|no )
+       else switch bicycle=private|no|dismount false true
 
 assign footaccess =
        if bikeaccess then true

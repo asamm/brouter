@@ -28,7 +28,7 @@ assign   smallpaved_factor      0.0
 assign   avoid_unsafe           1 # 0 as default, gives penalty to mainroad without bike friendly status.
 assign   hills                  1 # 1=default / 0=BRouter default/ 1=+ penalty for uphills >3.0 perc. / 2=velomobile-like avoiding slopes, 3= simulates ascend/length time equiv.
                                   # 4=valley mode, 5=No-Flats mode
-assign   isbike_for_mainroads   false # default=true / if false then bike friendly tag hints for mainroads are ignored, keeping their high penalties. v2.5.20
+assign   isbike_for_mainroads   true # default=true / if false then bike friendly tag hints for mainroads are ignored, keeping their high penalties. v2.5.20
 # SET BY Brouter-wrapper
 assign   path_preference        10.0 # %path_preference% DO NOT USE CLIENT SIDE - SET BY Brouter-wrapper app in 0.0  >  10.0  >  20.0 for difficulty param [-1.0, 1.0]
 
@@ -206,13 +206,11 @@ else 30
 assign defaultaccess =
        if access= then not motorroad=yes
        else if access=private|no then switch bicycle=permissive|yes true false
-       else true    
+       else true  
    
 assign bikeaccess =
-       if nodeaccessgranted then true
-       else if hascycleway then true
-       else if bicycle= then   (  if vehicle= then defaultaccess  else not vehicle=private|no   )
-                        else  not bicycle=private|no|dismount  
+       if bicycle= then ( if vehicle= then defaultaccess else not vehicle=private|no )
+       else switch bicycle=private|no|dismount false true
 
 assign footaccess =
        if bikeaccess then true
