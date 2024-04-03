@@ -94,7 +94,7 @@ assign   pass2coefficient 0
 assign   use_proposed_cn        1 # 0 as default, considers proposed cycle networks as unmarked but valid cycleroutes.
 assign   considerTurnRestrictions = true  #v2.5.11
 
-assign   unsafe_penalty_value 1.0 # 1 - was 2 in Trekking, but this may cause U-like safe routes 
+assign   unsafe_penalty_value 1.8 # 1 - was 2 in Trekking, but this may cause U-like safe routes 
 assign   cost_of_unknown      2.0 # 2 as default, cost of highway=
 
 assign   c_ford_initialcost_node = 500
@@ -342,7 +342,7 @@ assign smallpaved_factor_for_road if  ( equal smallpaved_factor 0.0 ) then 0.0
 
 assign highwayclass_basefactor  
     if ismainroad then 
-        switch highway=trunk|trunk_link          1.8  switch highway=primary|primary_link      1.5
+        switch highway=trunk|trunk_link          50.0  switch highway=primary|primary_link      16.0
         switch highway=secondary|secondary_link  1.2  switch highway=tertiary|tertiary_link    1.1   1.0
       else if istrack  then 
         switch highway=track 1.0 switch highway=path 1.1 switch highway=footway  1.2  1.0  # highway=road 
@@ -435,8 +435,8 @@ assign trafficpenalty0 = (
     (
       if      estimated_traffic_class=4 then 0.2
       else if estimated_traffic_class=5 then 0.4
-      else if estimated_traffic_class=6|7 then 0.6 
-      else 0
+      else if estimated_traffic_class=6|7 then 1
+      else 0.8
     )
     else if highway=secondary|secondary_link then
     (
@@ -444,7 +444,7 @@ assign trafficpenalty0 = (
       else if estimated_traffic_class=4 then 0.4
       else if estimated_traffic_class=5 then 0.6
       else if estimated_traffic_class=6|7 then 1
-      else 0
+      else 0.4
     )
     else if highway=tertiary|tertiary_link then
     (
@@ -452,7 +452,7 @@ assign trafficpenalty0 = (
       else if estimated_traffic_class=3 then 0.3
       else if estimated_traffic_class=4 then 0.5
       else if estimated_traffic_class=5|6|7 then 1
-      else 0
+      else 0.1
     )
     else 0
     )
@@ -460,7 +460,7 @@ assign trafficpenalty0 = (
 assign trafficpenalty =
   if hascycleway then min 0.3 trafficpenalty0
   else trafficpenalty0
-  
+
 # bend /trafficpenalties
    
 # bstart /costfactors
@@ -474,7 +474,7 @@ assign rawcostfactor ( # can be <1, adjusted to >=1 in final step of calculation
   # all other exclusions below (access, steps, ferries,..) should not be deleted by the decoder, to be available in voice-hint-processing
   min 9999 
   
-  switch    highway=steps  switch allow_steps     40 10000
+  switch    highway=steps  switch allow_steps     80 10000
   switch    route=ferry    switch allow_ferries 5.67 10000
   switch    highway=construction                     10000
   switch    highway=proposed                         10000

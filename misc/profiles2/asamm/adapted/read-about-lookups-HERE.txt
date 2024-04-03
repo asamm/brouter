@@ -1,9 +1,4 @@
-This directory is the only place where lookups.dat is maintained. Once there are new lines added,
-make sure lookups.dat file is distributed to all places where needed.
+Make sure lookups.dat file is distributed to all places where needed.
 Lines must never be deleted, changes are incremental.
 There are major and minor version numbers at the start of the file. Keep them updated.
 
-lookups.dat is used:
-
-- for tiles generation in brouter-generator. (home/asamm/brouter-generator/generator/profiles2 10.2022 - Astra computing server)
-- in all instances of brouter routing server (App[s], Droplets on Digital Ocean - /home/brouter/brouter/profiles2)
