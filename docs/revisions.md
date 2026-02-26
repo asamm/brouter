@@ -2,19 +2,120 @@
 
 (ZIP-Archives including APK, readme + profiles)
 
-### New since last version
+### [brouter-1.7.8.zip](../brouter_bin/brouter-1.7.8.zip) (current revision, 12.07.2025)
 
 Android
 
-- Add parameter dialog for profile
+- enable edit for unused profiles
+- use parameter changed in the BRouter app
+- reuse parameter for repeat:profile function
+- use unordered values for profile listbox (e.g. fastbike profile)
+- Android 16
+
 
 Library
 
-- Add new function 'get elevation'
+- round trip function (engineMode = 4)
+- get way info (engineMode = 3)
+- voice hint for motorway exit
+- dynamic range for searching way points
+- enable a check for the start way
+- avoid u-turns on via points (if not corrected)
+- correct via points on or near roundabouds
+- enable export of the corrected way points
+- new method for pseudo-tags generation
+
+[Solved issues](https://github.com/abrensch/brouter/issues?q=is%3Aissue+milestone%3A%22Version+1.7.8%22+is%3Aclosed)
+
+
+### [brouter-1.7.7.zip](../brouter_bin/brouter-1.7.7.zip) (23.07.2024)
+
+- new Android API 34
+
+
+### [brouter-1.7.6.zip](../brouter_bin/brouter-1.7.6.zip) (20.06.2024)
+
+Android
+
+- bug fix for car profiles
+
+[Solved issues](https://github.com/abrensch/brouter/issues?q=is%3Aissue+milestone%3A%22Version+1.7.6%22+is%3Aclosed)
+
+
+### [brouter-1.7.5.zip](../brouter_bin/brouter-1.7.5.zip) (05.06.2024)
+
+Android
+
+- bug fix for repeat last route <repeat:...>
+
+Library
+
+- ISO8601 compatible timestamps in log
+- Update MIME type for GeoJSON responses
+
+Profiles
+
+- update gravel profile
+
+
 - Minor bug fixes
 
+[Solved issues](https://github.com/abrensch/brouter/issues?q=is%3Aissue+milestone%3A%22Version+1.7.5%22+is%3Aclosed)
 
-### [brouter-1.7.0.zip](../brouter_bin/brouter-1.7.0.zip) (current revision, 29.04.2023)
+
+### [brouter-1.7.4.zip](../brouter_bin/brouter-1.7.4.zip) (09.04.2024)
+
+Library
+
+- new "DIVIDE" command for profile calculation
+- new "maxslope" and "maxslopecost" parameters
+- new parameter collector
+- new output logic
+- rework on voice hints and roundabouts
+- enabled elevation raster files with 1 asec
+
+
+Android
+
+- BRouter translations
+- fallback on certificate problems
+
+
+- Minor bug fixes
+
+[Solved issues](https://github.com/abrensch/brouter/issues?q=is%3Aissue+milestone%3A%22Version+1.7.4%22+is%3Aclosed)
+
+
+### [brouter-1.7.3.zip](../brouter_bin/brouter-1.7.3.zip) (19.08.2023)
+
+-   Minor bug fixes
+
+### [brouter-1.7.2.zip](../brouter_bin/brouter-1.7.2.zip) (19.07.2023)
+
+-   Re-index Json output
+    Note: This is different to releases 1.7.0 and 1.7.1.
+    It is recommended to use the current version to avoid breaks in voice hint
+    output for GeoJson.
+
+### [brouter-1.7.1.zip](../brouter_bin/brouter-1.7.1.zip) (12.07.2023)
+
+Android
+
+-   Add parameter dialog for profile
+-   Add portrait mode for download view
+-   Add silent mode for calling apps
+-   Fixed download lookups.dat when download only single rd5 tile.
+
+Library
+
+-   Update matching points rules on areas with longer distances between way points
+-   Optimize constant expressions in profile parsing
+-   Rework on roundabouts (left-hand driving)
+-   Add new function 'get elevation'
+-   Minor bug fixes
+
+
+### [brouter-1.7.0.zip](../brouter_bin/brouter-1.7.0.zip) (29.04.2023)
 
 Android
 
@@ -108,7 +209,7 @@ Library
 -   performance improvements
 -   Bicycle+Foot ETA (estimated time of arrival)
 -   ETA data in GPX for Locus + OsmAnd
--   more precice distance calculation
+-   more precise distance calculation
 -   weighted nogos
 -   BRouter-Web related additions
 -   maxspeed:forrward/backward
@@ -172,7 +273,7 @@ Library
 -   filtering out unused way tags to increase profile cache efficiency
 -   cache sizing depending on android memory class
 -   fixed *ups* bug at very long distances
--   fixed a bug when using repeat-timeout shortcut without a cordinate source
+-   fixed a bug when using repeat-timeout shortcut without a coordinate source
 
 ### [brouter_1_4_4.zip](../brouter_bin/brouter_1_4_4.zip) (29.08.2016)
 
@@ -184,16 +285,16 @@ Library
 ### [brouter_1_4_3.zip](../brouter_bin/brouter_1_4_3.zip) (06.08.2016)
 
 -   Option for sending profiles via service interface
--   more aggresive profile replacement at version upgrade
+-   more aggressive profile replacement at version upgrade
 -   fixed a serious rounding bug when reading locus/orux waypoints
 
 ### [brouter_1_4_2.zip](../brouter_bin/brouter_1_4_2.zip) (16.05.2016)
 
 -   turn instructions, elevation on locus waypoints
--   turn-instructions, shift to less ambigious angles
+-   turn-instructions, shift to less ambiguous angles
 -   turn-instructions, locus transport mode cleanup
 
-### [brouter_1_4_1.zip](../brouter_bin/brouter_1_4_1.zip) (09.05.2016
+### [brouter_1_4_1.zip](../brouter_bin/brouter_1_4_1.zip) (09.05.2016)
 
 -   turn instructions, fixed locus roundabaouts
 -   added xor, lesser, sub operators for profiles
@@ -267,12 +368,12 @@ Library
 -   special, fast handling for trivial recalculations for timeout-free
     recalculations
 -   fixed the scaling for high-density screens in the download manager
--   added more [configuration options](https://brouter.de/brouter/kitkat_survival_readme.txt) to work
-    around the kitkat (Android 4.4) issues
+-   added more [configuration options](https://brouter.de/brouter/kitkat_survival_readme.txt)
+    to work around the kitkat (Android 4.4) issues
 
 ### [brouter_0_9_9.zip](../brouter_bin/brouter_0_9_9.zip) (18.4.2014, hot-fix 11.5.2014)
 
--   new (google-play compatible) signing key, UNINSTALL NECCESSARY!
+-   new (google-play compatible) signing key, UNINSTALL NECESSARY!
 -   added crc checksums to datafiles
 -   fixed a bug in accessing the last 64k of a datafile
 -   extended basedir-proposals (**Fixed Android 4.4 issue on 11.5.2014**)
@@ -296,7 +397,7 @@ Library
 -   improved nogo-handling in service interface (inverse logic, routing mode
     stores veto-list)
 -   added waypoint-selection dialogs when from/to not given
--   summary page after service-mode confifuration update
+-   summary page after service-mode configuration update
 -   allowed configuration of BRouter's servicemodes without any supported
     maptool installed
 -   added a redirection-workaround for the tracks-output directory
@@ -313,7 +414,7 @@ Library
 
 ### [brouter_0_9_5.zip](../brouter_bin/brouter_0_9_5.zip) (20.10.2013)
 
--   some performance improvments
+-   some performance improvements
 -   support for car-subset datafiles
 -   timeout-free partial recalcs in service-mode
 -   added java-version (executable jar) to distribution zip

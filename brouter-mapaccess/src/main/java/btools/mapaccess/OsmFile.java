@@ -17,7 +17,7 @@ import btools.codec.WaypointMatcher;
 import btools.util.ByteDataReader;
 import btools.util.Crc32;
 
-final class OsmFile {
+final public class OsmFile {
   private RandomAccessFile is = null;
   private long fileOffset;
 
@@ -31,8 +31,8 @@ final class OsmFile {
 
   private int divisor;
   private int cellsize;
-  private int ncaches;
   private int indexsize;
+  protected byte elevationType = 3;
 
   public OsmFile(PhysicalFile rafile, int lonDegree, int latDegree, DataBuffers dataBuffers) throws IOException {
     this.lonDegree = lonDegree;
@@ -43,9 +43,10 @@ final class OsmFile {
 
     if (rafile != null) {
       divisor = rafile.divisor;
+      elevationType = rafile.elevationType;
 
       cellsize = 1000000 / divisor;
-      ncaches = divisor * divisor;
+      int ncaches = divisor * divisor;
       indexsize = ncaches * 4;
 
       byte[] iobuffer = dataBuffers.iobuffer;
@@ -141,7 +142,7 @@ final class OsmFile {
       new DirectWeaver(bc, dataBuffers, lonIdx, latIdx, divisor, wayValidator, waypointMatcher, hollowNodes);
       return MicroCache.emptyNonVirgin;
     } finally {
-      // crc check only if the buffer has not been fully read 
+      // crc check only if the buffer has not been fully read
       int readBytes = (bc.getReadingBitPosition() + 7) >> 3;
       if (readBytes != asize - 4) {
         int crcData = Crc32.crc(ab, 0, asize - 4);

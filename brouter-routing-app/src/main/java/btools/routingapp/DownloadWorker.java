@@ -4,6 +4,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
+import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.util.Log;
 
@@ -72,6 +73,7 @@ public class DownloadWorker extends Worker {
   int version = -1;
   int appversion = -1;
   String errorCode = null;
+  private boolean bHttpDownloadProblem;
 
   public DownloadWorker(
     @NonNull Context context,
@@ -169,7 +171,10 @@ public class DownloadWorker extends Worker {
     }
     notificationBuilder.setContentText("Starting Download");
     // Mark the Worker as important
-    setForegroundAsync(new ForegroundInfo(NOTIFICATION_ID, notificationBuilder.build()));
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+      setForegroundAsync(new ForegroundInfo(NOTIFICATION_ID, notificationBuilder.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC));
+    else
+      setForegroundAsync(new ForegroundInfo(NOTIFICATION_ID, notificationBuilder.build()));
     try {
       if (DEBUG) Log.d(LOG_TAG, "Download lookup & profiles");
       if (!downloadLookup()) {
@@ -251,6 +256,7 @@ public class DownloadWorker extends Worker {
           newappversion = meta.minAppVersion;
         } else {
           String lookupLocation = mServerConfig.getLookupUrl() + fileName;
+          if (bHttpDownloadProblem) lookupLocation = lookupLocation.replace("https://", "http://");
           URL lookupUrl = new URL(lookupLocation);
           downloadProgressListener.onDownloadStart(fileName, DownloadType.LOOKUP);
           changed = downloadFile(lookupUrl, tmplookupFile, size, false, DownloadType.LOOKUP);
@@ -275,7 +281,8 @@ public class DownloadWorker extends Worker {
             errorCode = "Version error";
             return false;
           }
-        } else if (changed) {
+        }
+        if (changed) {
           lookupFile.delete();
           tmplookupFile.renameTo(lookupFile);
           versionChanged = changed;
@@ -300,6 +307,7 @@ public class DownloadWorker extends Worker {
         //if (profileFile.exists())
         {
           String profileLocation = mServerConfig.getProfilesUrl() + fileName;
+          if (bHttpDownloadProblem) profileLocation = profileLocation.replace("https://", "http://");
           URL profileUrl = new URL(profileLocation);
           int size = (int) (profileFile.exists() ? profileFile.length() : 0);
 
@@ -321,6 +329,8 @@ public class DownloadWorker extends Worker {
   private void downloadSegment(String segmentBaseUrl, String segmentName) throws IOException, InterruptedException {
     File segmentFile = new File(baseDir, SEGMENTS_DIR + segmentName);
     File segmentFileTemp = new File(segmentFile.getAbsolutePath() + "_tmp");
+    if (bHttpDownloadProblem) segmentBaseUrl = segmentBaseUrl.replace("https://", "http://");
+
     if (DEBUG) Log.d(LOG_TAG, "Download " + segmentName + " " + version + " " + versionChanged);
     try {
       if (segmentFile.exists()) {
@@ -328,6 +338,7 @@ public class DownloadWorker extends Worker {
           String md5 = Rd5DiffManager.getMD5(segmentFile);
           if (DEBUG) Log.d(LOG_TAG, "Calculating local checksum " + md5);
           String segmentDeltaLocation = segmentBaseUrl + "diff/" + segmentName.replace(SEGMENT_SUFFIX, "/" + md5 + SEGMENT_DIFF_SUFFIX);
+          if (bHttpDownloadProblem) segmentDeltaLocation = segmentDeltaLocation.replace("https://", "http://");
           URL segmentDeltaUrl = new URL(segmentDeltaLocation);
           if (httpFileExists(segmentDeltaUrl)) {
             File segmentDeltaFile = new File(segmentFile.getAbsolutePath() + "_diff");
@@ -371,13 +382,28 @@ public class DownloadWorker extends Worker {
   }
 
   private boolean httpFileExists(URL downloadUrl) throws IOException {
-    HttpURLConnection connection = (HttpURLConnection) downloadUrl.openConnection();
-    connection.setConnectTimeout(5000);
-    connection.setRequestMethod("HEAD");
-    connection.setDoInput(false);
+    HttpURLConnection connection = null;
     try {
+      connection = (HttpURLConnection) downloadUrl.openConnection();
+      connection.setConnectTimeout(5000);
+      connection.setRequestMethod("HEAD");
+      connection.setDoInput(false);
       connection.connect();
       return connection.getResponseCode() == HttpURLConnection.HTTP_OK;
+    } catch (javax.net.ssl.SSLHandshakeException e) {
+      String url = downloadUrl.toString().replace("https://", "http://");
+      downloadUrl = new URL(url);
+      try {
+        connection = (HttpURLConnection) downloadUrl.openConnection();
+        connection.setConnectTimeout(5000);
+        connection.setRequestMethod("HEAD");
+        connection.setDoInput(false);
+        connection.connect();
+        bHttpDownloadProblem = true;
+        return connection.getResponseCode() == HttpURLConnection.HTTP_OK;
+      } finally {
+        connection.disconnect();
+      }
     } finally {
       connection.disconnect();
     }
@@ -386,14 +412,24 @@ public class DownloadWorker extends Worker {
 
   private boolean downloadFile(URL downloadUrl, File outputFile, int fileSize, boolean limitDownloadSpeed, DownloadType type) throws IOException, InterruptedException {
     if (DEBUG) Log.d(LOG_TAG, "download " + outputFile.getAbsolutePath());
-    HttpURLConnection connection = (HttpURLConnection) downloadUrl.openConnection();
-    connection.setConnectTimeout(5000);
-    connection.setDefaultUseCaches(false);
-
+    HttpURLConnection connection = null;
     InputStream input = null;
     OutputStream output = null;
     try {
-      connection.connect();
+      try {
+        connection = (HttpURLConnection) downloadUrl.openConnection();
+        connection.setConnectTimeout(5000);
+        connection.setDefaultUseCaches(false);
+        connection.connect();
+      } catch (javax.net.ssl.SSLHandshakeException e) {
+        String url = downloadUrl.toString().replace("https://", "http://");
+        downloadUrl = new URL(url);
+        connection = (HttpURLConnection) downloadUrl.openConnection();
+        connection.setConnectTimeout(5000);
+        connection.setDefaultUseCaches(false);
+        connection.connect();
+        bHttpDownloadProblem = true;
+      }
 
       if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
         throw new IOException("HTTP Request failed: " + downloadUrl + " returned " + connection.getResponseCode());

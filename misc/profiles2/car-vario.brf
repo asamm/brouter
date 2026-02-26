@@ -17,6 +17,9 @@ assign avoid_toll          = false  # %avoid_toll% | Avoid paid roads | boolean
 assign avoid_unpaved       = false  # %avoid_unpaved% | Avoid unpaved roads, if possible | boolean
 assign avoid_motorways     = false  # %avoid_motorways% | Avoid motorways | boolean
 
+assign add_beeline         = false  # %add_beeline% | Enable beeline on distant start/end points | boolean
+assign use_offroad         = false  # %use_offroad% | Enable additional roads | boolean
+
 # Kinematic model parameters
 assign vmax             = 90     # %vmax% | Target speed (in km/h) | number
 assign recup_efficiency = 0.7    # %recup_efficiency% | (ratio) | number
@@ -53,15 +56,17 @@ assign caraccess
               switch motor_vehicle=
                      switch vehicle=
                             switch access=
-                                   switch highway=motorway|motorway_link    1
-                                   switch highway=trunk|trunk_link          1
-                                   switch highway=primary|primary_link      1
-                                   switch highway=secondary|secondary_link  1
-                                   switch highway=tertiary|tertiary_link    1
-                                   switch highway=unclassified              1
-                                   switch route=ferry                       1
-                                   switch isresidentialorliving             1
-                                   switch highway=service                   1
+                                   switch highway=motorway|motorway_link       1
+                                   switch highway=trunk|trunk_link             1
+                                   switch highway=primary|primary_link         1
+                                   switch highway=secondary|secondary_link     1
+                                   switch highway=tertiary|tertiary_link       1
+                                   switch highway=unclassified                 1
+                                   switch and highway=track use_offroad        1
+                                   switch and highway=road use_offroad         1
+                                   switch route=ferry                          1
+                                   switch isresidentialorliving                1
+                                   switch highway=service                      1
                                    0
                                    access=yes|permissive|designated|destination
                             vehicle=yes|designated|destination

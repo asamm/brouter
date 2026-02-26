@@ -8,6 +8,8 @@ package btools.mapcreator;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import btools.codec.MicroCache;
 import btools.codec.MicroCache2;
@@ -91,10 +93,10 @@ public class OsmNodeP extends OsmLinkP {
     return null;
   }
 
-  public void writeNodeData(MicroCache mc, OsmTrafficMap trafficMap) throws IOException {
+  public void writeNodeData(MicroCache mc) throws IOException {
     boolean valid = true;
     if (mc instanceof MicroCache2) {
-      valid = writeNodeData2((MicroCache2) mc, trafficMap);
+      valid = writeNodeData2((MicroCache2) mc);
     } else
       throw new IllegalArgumentException("unknown cache version: " + mc.getClass());
     if (valid) {
@@ -105,7 +107,7 @@ public class OsmNodeP extends OsmLinkP {
   }
 
   public void checkDuplicateTargets() {
-    HashMap<OsmNodeP, OsmLinkP> targets = new HashMap<>();
+    Map<OsmNodeP, OsmLinkP> targets = new HashMap<>();
 
     for (OsmLinkP link0 = getFirstLink(); link0 != null; link0 = link0.getNext(this)) {
       OsmLinkP link = link0;
@@ -142,7 +144,7 @@ public class OsmNodeP extends OsmLinkP {
     }
   }
 
-  public boolean writeNodeData2(MicroCache2 mc, OsmTrafficMap trafficMap) throws IOException {
+  public boolean writeNodeData2(MicroCache2 mc) throws IOException {
     boolean hasLinks = false;
 
     // write turn restrictions
@@ -165,14 +167,14 @@ public class OsmNodeP extends OsmLinkP {
     mc.writeVarBytes(getNodeDecsription());
 
     // buffer internal reverse links
-    ArrayList<OsmNodeP> internalReverse = new ArrayList<>();
+    List<OsmNodeP> internalReverse = new ArrayList<>();
 
     for (OsmLinkP link0 = getFirstLink(); link0 != null; link0 = link0.getNext(this)) {
       OsmLinkP link = link0;
       OsmNodeP origin = this;
       OsmNodeP target = null;
 
-      ArrayList<OsmNodeP> linkNodes = new ArrayList<>();
+      List<OsmNodeP> linkNodes = new ArrayList<>();
       linkNodes.add(this);
 
       // first pass just to see if that link is consistent
@@ -210,11 +212,7 @@ public class OsmNodeP extends OsmLinkP {
         }
       }
 
-      // add traffic simulation, if present
       byte[] description = link0.descriptionBitmap;
-      if (trafficMap != null) {
-        description = trafficMap.addTrafficClass(linkNodes, description);
-      }
 
       // write link data
       int sizeoffset = mc.writeSizePlaceHolder();
@@ -226,7 +224,7 @@ public class OsmNodeP extends OsmLinkP {
         origin = this;
         for (int i = 1; i < linkNodes.size() - 1; i++) {
           OsmNodeP tranferNode = linkNodes.get(i);
-          if ((tranferNode.bits & OsmNodeP.DP_SURVIVOR_BIT) != 0) {
+          if ((tranferNode.bits & DP_SURVIVOR_BIT) != 0) {
             mc.writeVarLengthSigned(tranferNode.ilon - origin.ilon);
             mc.writeVarLengthSigned(tranferNode.ilat - origin.ilat);
             mc.writeVarLengthSigned(tranferNode.getSElev() - origin.getSElev());

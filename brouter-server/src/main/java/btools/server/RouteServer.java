@@ -16,6 +16,16 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.zip.GZIPOutputStream;
 
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.StringTokenizer;
+import java.util.zip.GZIPOutputStream;
+
 public class RouteServer extends Thread implements Comparable<RouteServer> {
   public static final String PROFILE_UPLOAD_URL = "/brouter/profile";
   static final String HTTP_STATUS_OK = "200 OK";
@@ -39,7 +49,7 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
     if (e != null) e.terminate();
   }
 
-  private static DateFormat tsFormat = new SimpleDateFormat("dd.MM.yy HH:mm", new Locale("en", "US"));
+  private static DateFormat tsFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", new Locale("en", "US"));
 
   private static String formattedTimeStamp(long t) {
     synchronized (tsFormat) {
@@ -128,7 +138,9 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
       }
 
       String url = getline.split(" ")[1];
-      Map<String, String> params = getUrlParams(url);
+
+      RoutingParamCollector routingParamCollector = new RoutingParamCollector();
+      Map<String, String> params = routingParamCollector.getUrlParams(url);
 
       long maxRunningTime = getMaxRunningTime();
 
@@ -138,8 +150,8 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
       } else if (url.startsWith(PROFILE_UPLOAD_URL)) {
         if (getline.startsWith("OPTIONS")) {
           // handle CORS preflight request (Safari)
-          String corsHeaders = "Access-Control-Allow-Methods: GET, POST\n"
-            + "Access-Control-Allow-Headers: Content-Type\n";
+          String corsHeaders = "Access-Control-Allow-Methods: GET, POST\r\n"
+            + "Access-Control-Allow-Headers: Content-Type\r\n";
           writeHttpHeader(bw, "text/plain", null, corsHeaders, HTTP_STATUS_OK);
           bw.flush();
           return;
@@ -173,7 +185,7 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
         return;
       }
       RoutingContext rc = handler.readRoutingContext();
-      List<OsmNodeNamed> wplist = handler.readWayPointList();
+      List<OsmNodeNamed> wplist = routingParamCollector.getWayPointList(params.get("lonlats"));
 
       if (wplist.size() < 10) {
         SuspectManager.nearRecentWps.add(wplist);
@@ -224,18 +236,31 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
       } else {
         OsmTrack track = cr.getFoundTrack();
 
-        String headers = encodings == null || encodings.indexOf("gzip") < 0 ? null : "Content-Encoding: gzip\n";
+        if (engineMode == 2) {
+          // no zip for this engineMode
+          encodings = null;
+        }
+        String headers = encodings == null || encodings.indexOf("gzip") < 0 ? null : "Content-Encoding: gzip\r\n";
         writeHttpHeader(bw, handler.getMimeType(), handler.getFileName(), headers, HTTP_STATUS_OK);
-        if (track != null) {
-          if (headers != null) { // compressed
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Writer w = new OutputStreamWriter(new GZIPOutputStream(baos), "UTF-8");
-            w.write(handler.formatTrack(track));
-            w.close();
-            bw.flush();
-            clientSocket.getOutputStream().write(baos.toByteArray());
-          } else {
-            bw.write(handler.formatTrack(track));
+        if (engineMode == RoutingEngine.BROUTER_ENGINEMODE_ROUTING ||
+            engineMode == RoutingEngine.BROUTER_ENGINEMODE_ROUNDTRIP) {
+          if (track != null) {
+            if (headers != null) { // compressed
+              ByteArrayOutputStream baos = new ByteArrayOutputStream();
+              Writer w = new OutputStreamWriter(new GZIPOutputStream(baos), "UTF-8");
+              w.write(handler.formatTrack(track));
+              w.close();
+              bw.flush();
+              clientSocket.getOutputStream().write(baos.toByteArray());
+            } else {
+              bw.write(handler.formatTrack(track));
+            }
+          }
+        } else if (engineMode == RoutingEngine.BROUTER_ENGINEMODE_GETELEV ||
+                   engineMode == RoutingEngine.BROUTER_ENGINEMODE_GETINFO) {
+          String s = cr.getFoundInfo();
+          if (s != null) {
+            bw.write(s);
           }
         }
       }
@@ -297,7 +322,7 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
 
     ProfileCache.setSize(2 * maxthreads);
 
-    PriorityQueue<RouteServer> threadQueue = new PriorityQueue<>();
+    Queue<RouteServer> threadQueue = new PriorityQueue<>();
 
     ServerSocket serverSocket = args.length > 5 ? new ServerSocket(Integer.parseInt(args[3]), 100, InetAddress.getByName(args[5])) : new ServerSocket(Integer.parseInt(args[3]));
 
@@ -362,7 +387,7 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
 
 
   private static Map<String, String> getUrlParams(String url) throws UnsupportedEncodingException {
-    HashMap<String, String> params = new HashMap<>();
+    Map<String, String> params = new HashMap<>();
     String decoded = URLDecoder.decode(url, "UTF-8");
     StringTokenizer tk = new StringTokenizer(decoded, "?&");
     while (tk.hasMoreTokens()) {
@@ -402,20 +427,20 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
 
   private static void writeHttpHeader(BufferedWriter bw, String mimeType, String fileName, String headers, String status) throws IOException {
     // http-header
-    bw.write(String.format("HTTP/1.1 %s\n", status));
-    bw.write("Connection: close\n");
-    bw.write("Content-Type: " + mimeType + "; charset=utf-8\n");
+    bw.write(String.format("HTTP/1.1 %s\r\n", status));
+    bw.write("Connection: close\r\n");
+    bw.write("Content-Type: " + mimeType + "; charset=utf-8\r\n");
     if (fileName != null) {
-      bw.write("Content-Disposition: attachment; filename=\"" + fileName + "\"\n");
+      bw.write("Content-Disposition: attachment; filename=\"" + fileName + "\"\r\n");
     }
-    bw.write("Access-Control-Allow-Origin: *\n");
+    bw.write("Access-Control-Allow-Origin: *\r\n");
     if (headers != null) {
       bw.write(headers);
     }
-    bw.write("\n");
+    bw.write("\r\n");
   }
 
-  private static void cleanupThreadQueue(PriorityQueue<RouteServer> threadQueue) {
+  private static void cleanupThreadQueue(Queue<RouteServer> threadQueue) {
     for (; ; ) {
       boolean removedItem = false;
       for (RouteServer t : threadQueue) {

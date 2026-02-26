@@ -1,9 +1,12 @@
 -- special config to calcule pseudo-tags /  "Brouter project"
+-- EssBee version 08/05/2023
 
 local srid = 3857
+--local srid = 4326
 
--- 3857 SHOULD BE USED here for distance calculation ... (not srid = 4326 !)
---  https://gis.stackexchange.com/questions/48949/epsg-3857-or-4326-for-web-mapping
+
+-- 3857 (projection) SHOULD BE USED here for distance calculation ... (not srid = 4326 !)
+-- https://gis.stackexchange.com/questions/48949/epsg-3857-or-4326-for-web-mapping  
 
 local tables = {}
 
@@ -13,7 +16,9 @@ tables.lines = osm2pgsql.define_way_table('lines', {
    { column = 'highway', type = 'text' },
    { column = 'maxspeed', type = 'text' },
    { column = 'waterway', type = 'text' },
+   { column = 'natural', type = 'text' },
    { column = 'width', type = 'text' },
+   { column = 'oneway', type = 'text' },
    { column = 'way', type = 'linestring', projection = srid, not_null = true },
 })
 
@@ -28,12 +33,18 @@ tables.polygons = osm2pgsql.define_area_table('polygons', {
    { column = 'leisure', type = 'text' },
    { column = 'natural', type = 'text' },
    { column = 'water', type = 'text' },
+   { column = 'power', type = 'text' },
+   { column = 'plant_method', type = 'text' },
+   { column = 'plant_source', type = 'text' },
+   { column = 'aeroway', type = 'text' },
+   { column = 'aerodrome', type = 'text' },
    { column = 'way', type = 'geometry', projection = srid, not_null = true },
 })
 
 
 tables.cities = osm2pgsql.define_node_table('cities', {
    { column = 'name', type = 'text' },
+   { column = 'name_en', type = 'text' },
    { column = 'place', type = 'text' },
    { column = 'admin_level', type = 'text' },
    { column = 'osm_id', type = 'text' },
@@ -47,6 +58,7 @@ tables.cities_rel = osm2pgsql.define_relation_table('cities_rel', {
    { column = 'admin_level', type = 'text' },
    { column = 'boundary', type = 'text' },
    { column = 'name', type = 'text' },
+   { column = 'name_en', type = 'text' },
    { column = 'place', type = 'text' },
    { column = 'osm_id', type = 'text' },
    { column = 'population', type = 'text' },
@@ -73,21 +85,48 @@ function has_area_tags(tags)
    end
 
    return tags.place
-   or tags.population
+          or tags.population
+end
+
+function get_plant_source(tags)
+   local source = nil
+
+   for _, key in ipairs({'source'}) do
+      local a = tags['plant:' .. key]
+      if a then
+         source = a
+      end
+   end
+
+   return source
+end
+
+
+function get_plant_method(tags)
+   local method = nil
+
+   for _, key in ipairs({'method'}) do
+      local a = tags['plant:' .. key]
+      if a then
+         method = a
+      end
+   end
+
+   return method
 end
 
 function osm2pgsql.process_node(object)
 
-   if (object.tags.place == 'city' or object.tags.place == 'town' or object.tags.place == 'municipality') and has_area_tags(object.tags)  then
+if (object.tags.place == 'city' or object.tags.place == 'town' or object.tags.place == 'village' or object.tags.place == 'municipality') and has_area_tags(object.tags)  then
       tables.cities:insert({
          osm_id = object.id,
          name = object.tags.name,
+         name_en = object.tags['name:en'],
          place = object.tags.place,
          admin_level = object.tags.admin_level,
          population = object.tags.population,
          way   = object:as_point()
       })
-
    end
 
    if (object.tags.natural == 'peak')   then
@@ -98,15 +137,13 @@ function osm2pgsql.process_node(object)
          osm_id = object.id,
          way = object:as_point()
       })
-
    end
-
 end
 
 function osm2pgsql.process_way(object)
    local way_type = object:grab_tag('type')
 
-   if  ( object.tags.natural == 'water') or (object.tags.landuse ~= nil ) or (object.tags.leisure ~= nil ) then
+   if (object.tags.natural == 'water') or ( object.tags.natural == 'bay') or ( object.tags.natural == 'beach') or ( object.tags.natural == 'coastline') or ( object.tags.natural == 'wetland') or ( object.tags.landuse ~= nil ) or (object.tags.leisure ~= nil ) then
       tables.polygons:insert({
          name     = object.tags.name,
          osm_id    = object.id,
@@ -115,22 +152,28 @@ function osm2pgsql.process_way(object)
          leisure     = object.tags.leisure,
          natural    = object.tags.natural,
          water = object.tags.water,
+         power = object.tags.power,
+         plant_source = get_plant_source(object.tags),
+         plant_method = get_plant_method(object.tags),
+         aeroway = object.tags.aeroway,
+         aerodrome = object.tags.aerodrome,
          way = object:as_polygon()
-      })
+     })
    end
 
-   if ( object.tags.highway ~= nil) or  ( object.tags.waterway ~= nil) then
+   if (object.tags.highway ~= nil) or  ( object.tags.waterway ~= nil) or ( object.tags.natural == 'coastline') then
       tables.lines:insert({
          name = object.tags.name,
          osm_id =  object.id,
          highway = object.tags.highway,
          waterway = object.tags.waterway,
+         natural = object.tags.natural,
          width = object.tags.width,
          maxspeed = object.tags.maxspeed,
+         oneway = object.tags.oneway, 
          way = object:as_linestring()
       })
    end
-
 
 end
 
@@ -149,16 +192,22 @@ function osm2pgsql.process_relation(object)
       leisure     = object.tags.leisure,
       natural    = object.tags.natural,
       water = object.tags.water,
+      power = object.tags.power,
+      plant_source = get_plant_source(object.tags),
+      plant_method = get_plant_method(object.tags),
+      aeroway = object.tags.aeroway,
+      aerodrome = object.tags.aerodrome,
       way = object:as_multipolygon()
    })
 
-   --   if (relation_type == 'boundary') and has_area_tags(object.tags)  then
+--   if (relation_type == 'boundary') and has_area_tags(object.tags)  then
    if (relation_type == 'boundary')   then
       tables.cities_rel:insert({
          reltype    = object.tags.relation_type,
          boundary = object.tags.boundary,
          admin_level = object.tags.admin_level,
          name     = object.tags.name,
+         name_en  = object.tags['name:en'],
          place    = object.tags.place,
          population = object.tags.population,
          osm_id = object.id,

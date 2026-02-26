@@ -24,6 +24,7 @@ final public class PhysicalFile {
   String fileName;
 
   public int divisor = 80;
+  public byte elevationType = 3;
 
   public static void main(String[] args) {
     MicroCache.debug = true;
@@ -69,7 +70,7 @@ final public class PhysicalFile {
       DataBuffers dataBuffers = new DataBuffers();
       pf = new PhysicalFile(f, dataBuffers, -1, -1);
       int div = pf.divisor;
-      for (int lonDegree = 0; lonDegree < 5; lonDegree++) { // does'nt really matter..
+      for (int lonDegree = 0; lonDegree < 5; lonDegree++) { // doesn't really matter..
         for (int latDegree = 0; latDegree < 5; latDegree++) { // ..where on earth we are
           OsmFile osmf = new OsmFile(pf, lonDegree, latDegree, dataBuffers);
           if (osmf.hasData())
@@ -113,6 +114,10 @@ final public class PhysicalFile {
 
     if (len == pos) return; // old format o.k.
 
+    if ((len-pos) > extraLen) {
+      extraLen++;
+    }
+
     if (len < pos + extraLen) { // > is o.k. for future extensions!
       throw new IOException("file of size " + len + " too short, should be " + (pos + extraLen));
     }
@@ -134,5 +139,18 @@ final public class PhysicalFile {
     for (int i = 0; i < 25; i++) {
       fileHeaderCrcs[i] = dis.readInt();
     }
+    try {
+      elevationType = dis.readByte();
+    } catch (Exception e) {}
   }
+
+  public void close(){
+    if (ra != null) {
+      try {
+        ra.close();
+      } catch (Exception ee) {
+      }
+    }
+  }
+
 }

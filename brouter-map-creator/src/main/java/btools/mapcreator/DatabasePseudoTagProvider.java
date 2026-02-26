@@ -4,49 +4,49 @@
  */
 package btools.mapcreator;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import btools.util.CompactLongMap;
 import btools.util.FrozenLongMap;
 
 public class DatabasePseudoTagProvider {
 
-  long cntOsmWays = 0L;
-  long cntWayModified = 0L;
+  private long cntOsmWays = 0L;
+  private long cntWayModified = 0L;
 
-  Map<String, Long> pseudoTagsFound;
+  private Map<String, Long> pseudoTagsFound = new HashMap<>();
 
   FrozenLongMap<Map<String, String>> dbData;
 
-  public DatabasePseudoTagProvider(String jdbcurl) {
+  public static void main(String[] args) {
+    String jdbcurl = args[0];
+    String filename = args[1];
 
-    try (Connection conn = DriverManager.getConnection(jdbcurl)) {
+    try (Connection conn = DriverManager.getConnection(jdbcurl);
+         BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
+           filename.endsWith(".gz") ? new GZIPOutputStream(new FileOutputStream(filename)) : new FileOutputStream(filename)))) {
+
       conn.setAutoCommit(false);
 
-      System.out.println("DatabasePseudoTagProvider start connection to the database........" + jdbcurl);
+      System.out.println("DatabasePseudoTagProvider dumping data from " + jdbcurl + " to file " + filename);
 
-      Map<String, String> databaseField2Tag = new HashMap<>();
-      databaseField2Tag.put("noise_class", "estimated_noise_class");
-      databaseField2Tag.put("river_class", "estimated_river_class");
-      databaseField2Tag.put("forest_class", "estimated_forest_class");
-      databaseField2Tag.put("town_class", "estimated_town_class");
-      databaseField2Tag.put("traffic_class", "estimated_traffic_class");
-
-      pseudoTagsFound = new HashMap<>();
-      for (String pseudoTag : databaseField2Tag.values()) {
-        pseudoTagsFound.put(pseudoTag, 0L);
-      }
-
-      Map<Map<String, String>, Map<String, String>> mapUnifier = new HashMap<>();
-      CompactLongMap<Map<String, String>> data = new CompactLongMap<>();
-
-      System.out.println("DatabasePseudoTagProvider connect to the database ok........");
+      bw.write("losmid;noise_class;river_class;forest_class;town_class;traffic_class\n");
 
       String sql_all_tags = "SELECT * from all_tags";
       try(PreparedStatement psAllTags = conn.prepareStatement(sql_all_tags)) {
@@ -54,18 +54,75 @@ public class DatabasePseudoTagProvider {
         psAllTags.setFetchSize(100);
 
         // process the results
-        ResultSet rsBrouter = psAllTags.executeQuery();
+        ResultSet rs = psAllTags.executeQuery();
 
         long dbRows = 0L;
-        while (rsBrouter.next()) {
-          long osm_id = rsBrouter.getLong("losmid");
-          Map<String, String> row = new HashMap<>(5);
-          for (String key : databaseField2Tag.keySet()) {
-            String value = rsBrouter.getString(key);
-            if (value != null && !value.isEmpty()) {
-              row.put(databaseField2Tag.get(key), value);
-            }
+        while (rs.next()) {
+          StringBuilder line = new StringBuilder();
+          line.append(rs.getLong("losmid"));
+          appendDBTag(line, rs, "noise_class");
+          appendDBTag(line, rs, "river_class");
+          appendDBTag(line, rs, "forest_class");
+          appendDBTag(line, rs, "town_class");
+          appendDBTag(line, rs, "traffic_class");
+          line.append('\n');
+          bw.write(line.toString());
+          dbRows++;
+          if (dbRows % 1000000L == 0L) {
+            System.out.println(".. from database: rows =" + dbRows);
           }
+        }
+      }
+    } catch (SQLException g) {
+      System.err.format("DatabasePseudoTagProvider execute sql .. SQL State: %s\n%s\n", g.getSQLState(), g.getMessage());
+      System.exit(1);
+    } catch (Exception f) {
+      f.printStackTrace();
+      System.exit(1);
+    }
+  }
+
+  private static void appendDBTag(StringBuilder sb, ResultSet rs, String name) throws SQLException {
+    sb.append(';');
+    String v = rs.getString(name);
+    if (v != null) {
+      sb.append(v);
+    }
+  }
+
+  public DatabasePseudoTagProvider(String filename, String jdbcurl) {
+    if (filename != null) doFileImport(filename);
+    if (jdbcurl != null) doDatabaseImport(jdbcurl);
+  }
+
+  private void doDatabaseImport(String jdbcurl) {
+
+    try (Connection conn = DriverManager.getConnection(jdbcurl)) {
+
+      System.out.println("DatabasePseudoTagProvider reading from database: " + jdbcurl);
+      conn.setAutoCommit(false);
+
+
+      Map<Map<String, String>, Map<String, String>> mapUnifier = new HashMap<>();
+      CompactLongMap<Map<String, String>> data = new CompactLongMap<>();
+
+      String sql_all_tags = "SELECT * from all_tags";
+      try(PreparedStatement psAllTags = conn.prepareStatement(sql_all_tags)) {
+
+        psAllTags.setFetchSize(100);
+
+        // process the results
+        ResultSet rs = psAllTags.executeQuery();
+
+        long dbRows = 0L;
+        while (rs.next()) {
+          long osm_id = rs.getLong("losmid");
+          Map<String, String> row = new HashMap<>(5);
+          addDBTag(row, rs, "noise_class");
+          addDBTag(row, rs, "river_class");
+          addDBTag(row, rs, "forest_class");
+          addDBTag(row, rs, "town_class");
+          addDBTag(row, rs, "traffic_class");
 
           // apply the instance-unifier for the row-map
           Map<String, String> knownRow = mapUnifier.get(row);
@@ -76,15 +133,14 @@ public class DatabasePseudoTagProvider {
           }
           data.put(osm_id, row);
           dbRows++;
-
           if (dbRows % 1000000L == 0L) {
-            System.out.println(".. from database: rows =" + data.size() + " unique rows=" + mapUnifier.size());
+            System.out.println(".. from database: rows =" + dbRows);
           }
         }
+        System.out.println("freezing result map..");
+        dbData = new FrozenLongMap<>(data);
+        System.out.println("read from database: rows =" + dbData.size() + " unique rows=" + mapUnifier.size());
       }
-      System.out.println("freezing result map..");
-      dbData = new FrozenLongMap<>(data);
-      System.out.println("read from database: rows =" + dbData.size() + " unique rows=" + mapUnifier.size());
 
     } catch (SQLException g) {
       System.err.format("DatabasePseudoTagProvider execute sql .. SQL State: %s\n%s\n", g.getSQLState(), g.getMessage());
@@ -93,8 +149,92 @@ public class DatabasePseudoTagProvider {
       f.printStackTrace();
       System.exit(1);
     }
+
   }
 
+  private void doFileImport(String filename) {
+
+    try (BufferedReader br = new BufferedReader(new InputStreamReader(
+           filename.endsWith(".gz") ? new GZIPInputStream(new FileInputStream(filename)) : new FileInputStream(filename)))) {
+
+      System.out.println("DatabasePseudoTagProvider reading from file: " + filename);
+
+      br.readLine(); // skip header line
+
+      Map<Map<String, String>, Map<String, String>> mapUnifier = new HashMap<>();
+      CompactLongMap<Map<String, String>> data = new CompactLongMap<>();
+
+      long dbRows = 0L;
+      for (;;) {
+        String line = br.readLine();
+        if (line == null) {
+          break;
+        }
+        List<String> tokens = tokenize(line);
+        long osm_id = Long.parseLong(tokens.get(0));
+        Map<String, String> row = new HashMap<>(5);
+        addTag(row, tokens.get(1), "estimated_noise_class");
+        addTag(row, tokens.get(2), "estimated_river_class");
+        addTag(row, tokens.get(3), "estimated_forest_class");
+        addTag(row, tokens.get(4), "estimated_town_class");
+        addTag(row, tokens.get(5), "estimated_traffic_class");
+
+        // apply the instance-unifier for the row-map
+        Map<String, String> knownRow = mapUnifier.get(row);
+        if (knownRow != null) {
+          row = knownRow;
+        } else {
+          mapUnifier.put(row, row);
+        }
+        data.put(osm_id, row);
+        dbRows++;
+
+        if (dbRows % 1000000L == 0L) {
+          System.out.println(".. from database: rows =" + data.size() + " unique rows=" + mapUnifier.size());
+        }
+      }
+      System.out.println("freezing result map..");
+      dbData = new FrozenLongMap<>(data);
+      System.out.println("read from file: rows =" + dbData.size() + " unique rows=" + mapUnifier.size());
+    } catch (Exception f) {
+      f.printStackTrace();
+      System.exit(1);
+    }
+  }
+
+  // use own tokenizer as String.split, StringTokenizer
+  // etc. have issues with empty elements
+  private List<String> tokenize(String s) {
+    List<String> l = new ArrayList<>();
+    StringBuilder sb = new StringBuilder();
+    for (int i=0; i<s.length(); i++) {
+      char c = s.charAt(i);
+      if (c == ';') {
+        l.add(sb.toString());
+        sb.setLength(0);
+      } else {
+        sb.append(c);
+      }
+    }
+    l.add(sb.toString());
+    return l;
+  }
+
+  private static void addTag(Map<String, String> row, String s, String name) {
+    if (!s.isEmpty()) {
+      row.put(name, s);
+    }
+  }
+
+  private static void addDBTag(Map<String, String> row, ResultSet rs, String name) {
+    String v = null;
+    try {
+      v = rs.getString(name);
+    } catch (Exception e) {}
+    if (v != null) {
+      row.put("estimated_" + name, v);
+    }
+  }
 
   public void addTags(long osm_id, Map<String, String> map) {
 
@@ -116,10 +256,16 @@ public class DatabasePseudoTagProvider {
       return;
     }
 
-    cntWayModified = cntWayModified + 1;
+    cntWayModified++;
     for (String key : dbTags.keySet()) {
       map.put(key, dbTags.get(key));
-      pseudoTagsFound.put(key, pseudoTagsFound.get(key) + 1L);
+      Long cnt = pseudoTagsFound.get(key);
+      if (cnt == null) {
+        cnt = 0L;
+      }
+      pseudoTagsFound.put(key, cnt + 1L);
     }
   }
+
+
 }

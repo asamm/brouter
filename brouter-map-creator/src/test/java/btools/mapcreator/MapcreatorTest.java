@@ -35,14 +35,14 @@ public class MapcreatorTest {
     File profileCheck = new File(profileDir, "softaccess.brf");
     File borderFile = new File(tmpdir, "bordernids.dat");
 
-    new OsmFastCutter().doCut(lookupFile, nodes, ways, nodes55, ways55, borderFile, relFile, resFile, profileAll, profileReport, profileCheck, mapFile, null);
+    OsmFastCutter.doCut(lookupFile, nodes, ways, nodes55, ways55, borderFile, relFile, resFile, profileAll, profileReport, profileCheck, mapFile, null);
 
 
     // run PosUnifier
     File unodes55 = new File(tmpdir, "unodes55");
     File bordernodes = new File(tmpdir, "bordernodes.dat");
     unodes55.mkdir();
-    new PosUnifier().process(nodes55, unodes55, borderFile, bordernodes, workingDir.getAbsolutePath());
+    new PosUnifier().process(nodes55, unodes55, borderFile, bordernodes, workingDir.getAbsolutePath(), null);
 
     // run WayLinker
     File segments = new File(tmpdir, "segments");

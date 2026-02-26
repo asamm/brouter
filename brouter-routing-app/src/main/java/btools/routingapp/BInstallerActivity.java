@@ -6,15 +6,14 @@ import static btools.routingapp.BInstallerView.MASK_INSTALLED_RD5;
 import static btools.routingapp.BInstallerView.MASK_SELECTED_RD5;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
-import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.StatFs;
 import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
@@ -47,6 +46,8 @@ import btools.router.RoutingHelper;
 
 public class BInstallerActivity extends AppCompatActivity {
 
+  private static final String TAG = "BInstallerActivity";
+
   private static final int DIALOG_CONFIRM_DELETE_ID = 1;
   private static final int DIALOG_CONFIRM_NEXTSTEPS_ID = 2;
   private static final int DIALOG_CONFIRM_GETDIFFS_ID = 3;
@@ -65,16 +66,11 @@ public class BInstallerActivity extends AppCompatActivity {
 
   BInstallerView.OnSelectListener onSelectListener;
 
-  @SuppressWarnings("deprecation")
+  @SuppressLint("UsableSpace")
   public static long getAvailableSpace(String baseDir) {
-    StatFs stat = new StatFs(baseDir);
-
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-      return stat.getAvailableBlocksLong() * stat.getBlockSizeLong();
-    } else {
-      //noinspection deprecation
-      return (long) stat.getAvailableBlocks() * stat.getBlockSize();
-    }
+    File f = new File(baseDir);
+    if (!f.exists()) return 0L;
+    return f.getUsableSpace();
   }
 
   @Override
@@ -82,8 +78,6 @@ public class BInstallerActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
 
     boolean running = isDownloadRunning(DownloadWorker.class);
-
-    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
     setContentView(R.layout.activity_binstaller);
 
@@ -160,6 +154,7 @@ public class BInstallerActivity extends AppCompatActivity {
   }
 
   private void updateDownloadButton() {
+    if (mBaseDir == null) return;
     final ArrayList<Integer> selectedTilesDownload = mBInstallerView.getSelectedTiles(MASK_SELECTED_RD5);
     final ArrayList<Integer> selectedTilesLastUpdate = mBInstallerView.getSelectedTiles(MASK_CURRENT_RD5);
     final ArrayList<Integer> selectedTilesUpdate = mBInstallerView.getSelectedTiles(MASK_INSTALLED_RD5);
@@ -177,7 +172,7 @@ public class BInstallerActivity extends AppCompatActivity {
       }
       mButtonDownload.setText(getString(R.string.action_download, getSegmentsPlural(selectedTilesDownload.size())));
       mButtonDownload.setEnabled(true);
-      mSummaryInfo.setText(getString(R.string.summary_segments, Formatter.formatFileSize(this, tileSize), Formatter.formatFileSize(this, getAvailableSpace(mBaseDir.getAbsolutePath()))));
+      mSummaryInfo.setText(String.format(getString(R.string.summary_segments), Formatter.formatFileSize(this, tileSize), Formatter.formatFileSize(this, getAvailableSpace(mBaseDir.getAbsolutePath()))));
     } else if (selectedTilesUpdate.size() > 0) {
       mButtonDownload.setText(getString(R.string.action_update, getSegmentsPlural(selectedTilesUpdate.size())));
       mButtonDownload.setEnabled(true);
@@ -201,18 +196,31 @@ public class BInstallerActivity extends AppCompatActivity {
 
   public void downloadAll(ArrayList<Integer> downloadList, int all) {
     ArrayList<String> urlparts = new ArrayList<>();
+    int len = 0;
     for (Integer i : downloadList) {
       urlparts.add(baseNameForTile(i));
+      len++;
+      if (len > 500) break;  // don't do too much work, data size 10240 Bytes only
     }
 
     downloadCanceled = false;
     mProgressIndicator.show();
     mButtonDownload.setEnabled(false);
 
-    Data inputData = new Data.Builder()
-      .putStringArray(DownloadWorker.KEY_INPUT_SEGMENT_NAMES, urlparts.toArray(new String[0]))
-      .putInt(DownloadWorker.KEY_INPUT_SEGMENT_ALL, all)
-      .build();
+    Data inputData = null;
+    try {
+      inputData = new Data.Builder()
+        .putStringArray(DownloadWorker.KEY_INPUT_SEGMENT_NAMES, urlparts.toArray(new String[0]))
+        .putInt(DownloadWorker.KEY_INPUT_SEGMENT_ALL, all)
+        .build();
+
+    } catch (IllegalStateException e) {
+      Object data;
+      Toast.makeText(this, R.string.msg_too_much_data, Toast.LENGTH_LONG).show();
+
+      Log.e(TAG, Log.getStackTraceString(e));
+      return;
+    }
 
     Constraints constraints = new Constraints.Builder()
       .setRequiresBatteryNotLow(true)
@@ -236,10 +244,9 @@ public class BInstallerActivity extends AppCompatActivity {
         //WorkManager.getInstance(getApplicationContext()).cancelWorkById(downloadWorkRequest.getId());
       }
     } catch (ExecutionException e) {
-      e.printStackTrace();
+      Log.e(TAG, Log.getStackTraceString(e));
     } catch (InterruptedException e) {
-      Log.d("worker", "canceled " + e.getMessage());
-      //e.printStackTrace();
+      Log.d(TAG, "canceled " + e.getMessage());
     }
 
     workManager
@@ -258,7 +265,7 @@ public class BInstallerActivity extends AppCompatActivity {
       }
 
       if (workInfo.getState() == WorkInfo.State.ENQUEUED) {
-        Toast.makeText(this, "Download scheduled. Check internet connection if it doesn't start.", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, R.string.msg_download_start, Toast.LENGTH_LONG).show();
         mProgressIndicator.hide();
         mProgressIndicator.setIndeterminate(true);
         mProgressIndicator.show();
@@ -273,7 +280,7 @@ public class BInstallerActivity extends AppCompatActivity {
         String segmentName = progress.getString(DownloadWorker.PROGRESS_SEGMENT_NAME);
         int percent = progress.getInt(DownloadWorker.PROGRESS_SEGMENT_PERCENT, 0);
         if (percent > 0) {
-          mDownloadSummaryInfo.setText("Downloading .. " + segmentName);
+          mDownloadSummaryInfo.setText(getString(R.string.msg_download_started) + segmentName);
         }
         if (percent > 0) {
           mProgressIndicator.setIndeterminate(false);
@@ -289,13 +296,13 @@ public class BInstallerActivity extends AppCompatActivity {
         String result;
         switch (workInfo.getState()) {
           case FAILED:
-            result = "Download failed";
+            result = getString(R.string.msg_download_failed);
             break;
           case CANCELLED:
-            result = "Download cancelled";
+            result = getString(R.string.msg_download_cancel);
             break;
           case SUCCEEDED:
-            result = "Download succeeded";
+            result = getString(R.string.msg_download_succeed);
             break;
           default:
             result = "";
@@ -343,12 +350,12 @@ public class BInstallerActivity extends AppCompatActivity {
     switch (id) {
       case DIALOG_CONFIRM_DELETE_ID:
         builder
-          .setTitle("Confirm Delete")
-          .setMessage("Really delete?").setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+          .setTitle(R.string.title_delete)
+          .setMessage(R.string.summary_delete).setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
               deleteSelectedTiles();
             }
-          }).setNegativeButton("No", new DialogInterface.OnClickListener() {
+          }).setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
             }
           });
@@ -356,9 +363,9 @@ public class BInstallerActivity extends AppCompatActivity {
 
       case DIALOG_CONFIRM_NEXTSTEPS_ID:
         builder
-          .setTitle("Version Problem")
-          .setMessage("The base version for tiles has changed. What to do?")
-          .setPositiveButton("Continue with current download, delete other old data", new DialogInterface.OnClickListener() {
+          .setTitle(R.string.title_version)
+          .setMessage(R.string.summary_version)
+          .setPositiveButton(R.string.action_version1, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
 
               ArrayList<Integer> allTiles = mBInstallerView.getSelectedTiles(MASK_INSTALLED_RD5);
@@ -370,11 +377,11 @@ public class BInstallerActivity extends AppCompatActivity {
               }
               downloadSelectedTiles();
             }
-          }).setNegativeButton("Select all for download and start", new DialogInterface.OnClickListener() {
+          }).setNegativeButton(R.string.action_version2, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
               downloadInstalledTiles();
             }
-          }).setNeutralButton("Cancel now, complete on an other day", new DialogInterface.OnClickListener() {
+          }).setNeutralButton(R.string.action_version3, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
               File tmplookupFile = new File(mBaseDir, "brouter/profiles2/lookups.dat.tmp");
               tmplookupFile.delete();
@@ -385,17 +392,17 @@ public class BInstallerActivity extends AppCompatActivity {
 
       case DIALOG_CONFIRM_GETDIFFS_ID:
         builder
-          .setTitle("Version Differences")
-          .setMessage("The base version for some tiles is different. What to do?")
-          .setPositiveButton("Download all different tiles", new DialogInterface.OnClickListener() {
+          .setTitle(R.string.title_version_diff)
+          .setMessage(R.string.summary_version_diff)
+          .setPositiveButton(R.string.action_version_diff1, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
               downloadDiffVersionTiles();
             }
-          }).setNegativeButton("Drop all different tiles", new DialogInterface.OnClickListener() {
+          }).setNegativeButton(R.string.action_version_diff2, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
               dropDiffVersionTiles();
             }
-          }).setNeutralButton("Cancel now, complete on an other day", new DialogInterface.OnClickListener() {
+          }).setNeutralButton(R.string.action_version_diff3, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
               finish();
             }
@@ -403,9 +410,9 @@ public class BInstallerActivity extends AppCompatActivity {
         return builder.create();
       case DIALOG_NEW_APP_NEEDED_ID:
         builder
-          .setTitle("App Version")
-          .setMessage("The new data version needs a new app. Please update BRouter first")
-          .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+          .setTitle(R.string.title_version)
+          .setMessage(R.string.summary_new_version)
+          .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
               finish();
             }
@@ -510,10 +517,10 @@ public class BInstallerActivity extends AppCompatActivity {
       }
       return running;
     } catch (ExecutionException e) {
-      e.printStackTrace();
+      Log.e(TAG, Log.getStackTraceString(e));
       return false;
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      Log.e(TAG, Log.getStackTraceString(e));
       return false;
     }
   }

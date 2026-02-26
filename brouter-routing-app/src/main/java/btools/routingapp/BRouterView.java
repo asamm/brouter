@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.zip.ZipEntry;
@@ -44,9 +45,13 @@ import btools.router.OsmTrack;
 import btools.router.RoutingContext;
 import btools.router.RoutingEngine;
 import btools.router.RoutingHelper;
+import btools.router.RoutingParamCollector;
+
 import btools.util.CheapRuler;
 
 public class BRouterView extends View {
+
+  private static final String TAG = "BRouterView";
 
   private final int memoryClass;
   RoutingEngine cr;
@@ -90,7 +95,7 @@ public class BRouterView extends View {
     if (cr != null) cr.terminate();
   }
 
-  public void init() {
+  public void init(boolean silent) {
     try {
       // get base dir from private file
       File baseDir = ConfigHelper.getBaseDir(getContext());
@@ -107,7 +112,7 @@ public class BRouterView extends View {
             String version = "v" + getContext().getString(R.string.app_version);
             File vFile = new File(brd, "profiles2/" + version);
             if (vFile.exists()) {
-              startSetup(baseDir, false);
+              startSetup(baseDir, false, silent);
               return;
             }
             String message = "(previous basedir " + baseDir + " has to migrate )";
@@ -117,7 +122,7 @@ public class BRouterView extends View {
             waitingForMigration = true;
             oldMigrationPath = brd.getAbsolutePath();
           } else {
-            startSetup(baseDir, false);
+            startSetup(baseDir, false, silent);
           }
           return;
         }
@@ -137,7 +142,7 @@ public class BRouterView extends View {
     }
   }
 
-  public void startSetup(File baseDir, boolean storeBasedir) {
+  public void startSetup(File baseDir, boolean storeBasedir, boolean silent) {
     if (baseDir == null) {
       baseDir = retryBaseDir;
       retryBaseDir = null;
@@ -148,8 +153,8 @@ public class BRouterView extends View {
       try {
         td.mkdirs();
       } catch (Exception e) {
-        Log.d("BRouterView", "Error creating base directory: " + e.getMessage());
-        e.printStackTrace();
+        Log.d(TAG, "Error creating base directory: " + e.getMessage());
+        Log.e(TAG, Log.getStackTraceString(e));
       }
 
       if (!td.isDirectory()) {
@@ -173,9 +178,19 @@ public class BRouterView extends View {
 
       // new init is done move old files
       if (waitingForMigration) {
-        Log.d("BR", "path " + oldMigrationPath + " " + basedir);
-        if (!oldMigrationPath.equals(basedir + "/brouter"))
-          moveFolders(oldMigrationPath, basedir + "/brouter");
+        Log.d(TAG, "path " + oldMigrationPath + " " + basedir);
+        Thread t = new Thread(new Runnable() {
+          @Override
+          public void run() {
+            if (!oldMigrationPath.equals(basedir + "/brouter"))
+              moveFolders(oldMigrationPath, basedir + "/brouter");
+          }});
+        t.start();
+        try {
+          t.join(500);
+        } catch (InterruptedException e) {
+          Log.e(TAG, Log.getStackTraceString(e));
+        }
         waitingForMigration = false;
       }
 
@@ -214,7 +229,9 @@ public class BRouterView extends View {
       // add a "last timeout" dummy profile
       File lastTimeoutFile = new File(modesDir + "/timeoutdata.txt");
       long lastTimeoutTime = lastTimeoutFile.lastModified();
-      if (lastTimeoutTime > 0 && System.currentTimeMillis() - lastTimeoutTime < 1800000) {
+      if (lastTimeoutTime > 0 &&
+        lastTimeoutFile.length() > 0 &&
+        System.currentTimeMillis() - lastTimeoutTime < 1800000) {
         BufferedReader br = new BufferedReader(new FileReader(lastTimeoutFile));
         String repeatProfile = br.readLine();
         br.close();
@@ -229,12 +246,19 @@ public class BRouterView extends View {
         throw new IllegalArgumentException("The profile-directory " + profileDir + " contains no routing profiles (*.brf)."
           + " see brouter.de/brouter for setup instructions.");
       }
+      if (silent) {
+        Intent intent = new Intent(getContext(), BInstallerActivity.class);
+        getContext().startActivity(intent);
+        return;
+      };
+
       if (!RoutingHelper.hasDirectoryAnyDatafiles(segmentDir)) {
+        ((BRouterActivity) getContext()).selectProfile(profiles.toArray(new String[0]), false);
         ((BRouterActivity) getContext()).startDownloadManager();
         waitingForSelection = true;
         return;
       }
-      ((BRouterActivity) getContext()).selectProfile(profiles.toArray(new String[0]));
+      ((BRouterActivity) getContext()).selectProfile(profiles.toArray(new String[0]), true);
     } catch (Exception e) {
       String msg = e instanceof IllegalArgumentException ? e.getMessage()
         + (cor == null ? "" : " (coordinate-source: " + cor.basedir + cor.rootdir + ")") : e.toString();
@@ -315,9 +339,9 @@ public class BRouterView extends View {
       out.close();
 
     } catch (FileNotFoundException fileNotFoundException) {
-      Log.e("tag", fileNotFoundException.getMessage());
+      Log.e(TAG, fileNotFoundException.getMessage());
     } catch (Exception e) {
-      Log.e("tag", e.getMessage());
+      Log.e(TAG, e.getMessage());
     }
   }
 
@@ -364,14 +388,14 @@ public class BRouterView extends View {
       try {
         cor.readAllPoints();
       } catch (Exception e) {
-        msg = "Error reading waypoints: " + e;
+        msg = getContext().getString(R.string.msg_read_wpt_error)+  ": " + e;
       }
 
       int size = cor.allpoints.size();
       if (size < 1)
-        msg = "coordinate source does not contain any waypoints!";
+        msg = getContext().getString(R.string.msg_no_wpt);
       if (size > 1000)
-        msg = "coordinate source contains too much waypoints: " + size + "(please use from/to/via names)";
+        msg = String.format(getContext().getString(R.string.msg_too_much_wpts), size);
     }
 
     if (msg != null) {
@@ -416,6 +440,7 @@ public class BRouterView extends View {
 
   public void startProcessing(String profile) {
     rawTrackPath = null;
+    String params = null;
     if (profile.startsWith("<repeat")) {
       needsViaSelection = needsNogoSelection = needsWaypointSelection = false;
       try {
@@ -425,6 +450,7 @@ public class BRouterView extends View {
         rawTrackPath = br.readLine();
         wpList = readWpList(br, false);
         nogoList = readWpList(br, true);
+        params = br.readLine();
         br.close();
       } catch (Exception e) {
         AppLogger.log(AppLogger.formatThrowable(e));
@@ -455,13 +481,13 @@ public class BRouterView extends View {
     if (needsWaypointSelection) {
       StringBuilder msg;
       if (wpList.size() == 0) {
-        msg = new StringBuilder("Expecting waypoint selection\n" + "(coordinate-source: " + cor.basedir + cor.rootdir + ")");
+        msg = new StringBuilder(getContext().getString(R.string.msg_no_wpt_selection) + "(coordinate-source: " + cor.basedir + cor.rootdir + ")");
       } else {
-        msg = new StringBuilder("current waypoint selection:\n");
+        msg = new StringBuilder(getContext().getString(R.string.msg_wpt_selection));
         for (int i = 0; i < wpList.size(); i++)
           msg.append(i > 0 ? "->" : "").append(wpList.get(i).name);
       }
-      ((BRouterActivity) getContext()).showResultMessage("Select Action", msg.toString(), wpList.size());
+      ((BRouterActivity) getContext()).showResultMessage(getContext().getString(R.string.title_action), msg.toString(), wpList.size());
       return;
     }
 
@@ -472,6 +498,15 @@ public class BRouterView extends View {
 
       rc.localFunction = profilePath;
       rc.turnInstructionMode = cor.getTurnInstructionMode();
+
+      if (params != null && params.length() > 2) {
+        try {
+          Map<String, String> profileParamsCollection = null;
+          RoutingParamCollector routingParamCollector = new RoutingParamCollector();
+          profileParamsCollection = routingParamCollector.getUrlParams(params);
+          routingParamCollector.setProfileParams(rc, profileParamsCollection);
+        } catch (Exception e) {}
+      }
 
       int plain_distance = 0;
       int maxlon = Integer.MIN_VALUE;
@@ -702,8 +737,13 @@ public class BRouterView extends View {
           ((BRouterActivity) getContext()).showErrorMessage(cr.getErrorMessage());
         } else {
           String memstat = memoryClass + "mb pathPeak " + ((cr.getPathPeak() + 500) / 1000) + "k";
-          String result = "version = BRouter-" + getContext().getString(R.string.app_version) + "\n" + "mem = " + memstat + "\ndistance = " + cr.getDistance() / 1000. + " km\n" + "filtered ascend = " + cr.getAscend()
-            + " m\n" + "plain ascend = " + cr.getPlainAscend() + " m\n" + "estimated time = " + cr.getTime();
+          String result = String.format(getContext().getString(R.string.msg_status_result),
+            getContext().getString(R.string.app_version),
+            memstat,
+            Double.toString(cr.getDistance() / 1000.),
+            Integer.toString(cr.getAscend()),
+            Integer.toString(cr.getPlainAscend()),
+            cr.getTime());
 
           rawTrack = cr.getFoundRawTrack();
 
@@ -712,9 +752,9 @@ public class BRouterView extends View {
             writeRawTrackToPath(rawTrackPath);
           }
 
-          String title = "Success";
+          String title = getContext().getString(R.string.success);
           if (cr.getAlternativeIndex() > 0)
-            title += " / " + cr.getAlternativeIndex() + ". Alternative";
+            title += " / " + cr.getAlternativeIndex() + ". " + getContext().getString(R.string.msg_alternative);
 
           ((BRouterActivity) getContext()).showResultMessage(title, result, rawTrackPath == null ? -1 : -3);
           trackOutfile = cr.getOutfile();
@@ -792,17 +832,17 @@ public class BRouterView extends View {
     }
   }
 
-  public void startConfigureService() {
+  public void startConfigureService(String sparams) {
     String[] modes = new String[]
       {"foot_short", "foot_fast", "bicycle_short", "bicycle_fast", "motorcar_short", "motorcar_fast"};
     boolean[] modesChecked = new boolean[6];
 
     String msg = "Choose service-modes to configure (" + profileName + " [" + nogoVetoList.size() + "])";
 
-    ((BRouterActivity) getContext()).selectRoutingModes(modes, modesChecked, msg);
+    ((BRouterActivity) getContext()).selectRoutingModes(modes, modesChecked, msg, sparams);
   }
 
-  public void configureService(String[] routingModes, boolean[] checkedModes) {
+  public void configureService(String[] routingModes, boolean[] checkedModes, String sparams) {
     // read in current config
     TreeMap<String, ServiceModeConfig> map = new TreeMap<>();
     BufferedReader br = null;
@@ -829,9 +869,15 @@ public class BRouterView extends View {
     for (int i = 0; i < 6; i++) {
       if (checkedModes[i]) {
         writeRawTrackToMode(routingModes[i]);
-        String s = map.get(routingModes[i]).params;
-        String p = map.get(routingModes[i]).profile;
-        if (s == null || !p.equals(profileName)) s = "noparams";
+        ServiceModeConfig sm = map.get(routingModes[i]);
+        String s = null;
+        String p = null;
+        if (sm != null) {
+          s = sm.params;
+          p = sm.profile;
+        }
+        if (!p.equals(profileName)) s = sparams;
+        if (s == null || s.equals("")) s = "noparams";
         ServiceModeConfig smc = new ServiceModeConfig(routingModes[i], profileName, s);
         for (OsmNodeNamed nogo : nogoVetoList) {
           smc.nogoVetos.add(nogo.ilon + "," + nogo.ilat);

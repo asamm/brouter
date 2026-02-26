@@ -339,7 +339,7 @@ incline;0000000779 steep
 incline;0000000861 3% 0 1 2 3 0% 1% 2% 3%
 incline;0000000724 5% 4 5 4%
 incline;0000000530 8% 6 7 8 6% 7%
-incline;0000003109 10% 9 10 9% 10°
+incline;0000003109 10% 9 10 9% 10Â°
 incline;0000001297 15% 11 12 13 14 15 11% 12% 13% 14%
 incline;0000000997 20% 16 17 18 19 20 16% 17% 18% 19%
 incline;0000000409 25% 21 22 23 24 25 21% 22% 23% 24%
@@ -347,7 +347,7 @@ incline;0000000263 30% 30 40 50 40% 50%
 incline;0000000861 -3% -1 -2 -3 -1% -2% -3%
 incline;0000000724 -5% -4 -5 -4%
 incline;0000000530 -8% -6 -7 -8 -6% -7%
-incline;0000001515 -10% -9 -10 -9% -10°
+incline;0000001515 -10% -9 -10 -9% -10Â°
 incline;0000001297 -15% -11 -12 -13 -14 -15 -11% -12% -13% -14%
 incline;0000000997 -20% -16 -17 -18 -19 -20 -16% -17% -18% -19%
 incline;0000000409 -25% -21 -22 -23 -24 -25 -21% -22% -23% -24%
@@ -710,8 +710,64 @@ piste:grooming;0000000004 backcountry
 piste:oneway;0000000005 yes
 piste:oneway;0000000005 no
 
+surface;0000727427 chipseal
+surface;0000727427 unhewn_cobblestone
+surface;0000727427 rock
+surface;0000727427 woodchips
 
- ---context:node
+safety_rope;0000007309 yes *
+rungs;0000007309 yes *
+ladder;0000007309 yes *
+assisted_trail;0000007309 yes *
+access:conditional;0000007309 *
+
+brouter_warning_feature_dummy_01;0000000001 dummy
+brouter_warning_feature_dummy_02;0000000001 dummy
+brouter_warning_feature_dummy_03;0000000001 dummy
+brouter_warning_feature_dummy_04;0000000001 dummy
+brouter_warning_feature_dummy_05;0000000001 dummy
+brouter_warning_feature_dummy_06;0000000001 dummy
+brouter_warning_feature_dummy_07;0000000001 dummy
+brouter_warning_feature_dummy_08;0000000001 dummy
+brouter_warning_feature_dummy_09;0000000001 dummy
+brouter_warning_feature_dummy_10;0000000001 dummy
+brouter_warning_feature_dummy_11;0000000001 dummy
+brouter_warning_feature_dummy_12;0000000001 dummy
+brouter_warning_feature_dummy_13;0000000001 dummy
+brouter_warning_feature_dummy_14;0000000001 dummy
+brouter_warning_feature_dummy_15;0000000001 dummy
+brouter_warning_feature_dummy_16;0000000001 dummy
+brouter_warning_feature_dummy_17;0000000001 dummy
+brouter_warning_feature_dummy_18;0000000001 dummy
+brouter_warning_feature_dummy_19;0000000001 dummy
+brouter_warning_feature_dummy_20;0000000001 dummy
+brouter_warning_feature_dummy_21;0000000001 dummy
+brouter_warning_feature_dummy_22;0000000001 dummy
+brouter_warning_feature_dummy_23;0000000001 dummy
+brouter_warning_feature_dummy_24;0000000001 dummy
+brouter_warning_feature_dummy_25;0000000001 dummy
+brouter_warning_feature_dummy_26;0000000001 dummy
+brouter_warning_feature_dummy_27;0000000001 dummy
+brouter_warning_feature_dummy_28;0000000001 dummy
+brouter_warning_feature_dummy_29;0000000001 dummy
+brouter_warning_feature_dummy_30;0000000001 dummy
+brouter_warning_feature_dummy_31;0000000001 dummy
+brouter_warning_feature_dummy_32;0000000001 dummy
+brouter_warning_feature_dummy_33;0000000001 dummy
+brouter_warning_feature_dummy_34;0000000001 dummy
+brouter_warning_feature_dummy_35;0000000001 dummy
+brouter_warning_feature_dummy_36;0000000001 dummy
+brouter_warning_feature_dummy_37;0000000001 dummy
+brouter_warning_feature_dummy_38;0000000001 dummy
+brouter_warning_feature_dummy_39;0000000001 dummy
+brouter_warning_feature_dummy_40;0000000001 dummy
+brouter_warning_feature_dummy_41;0000000001 dummy
+brouter_warning_feature_dummy_42;0000000001 dummy
+
+oneway:foot;0000000001 yes
+foot:backward;0000000001 no
+
+---context:node
 
 highway;0001314954 bus_stop
 highway;0001130090 crossing
@@ -964,3 +1020,7 @@ direction;0000021634 both
 traffic_signals:direction;0000062645 forward
 traffic_signals:direction;0000033961 backward
 traffic_signals:direction;0000007309 both
+
+safety_rope;0000007309 yes *
+rungs;0000007309 yes *
+ladder;0000007309 yes *

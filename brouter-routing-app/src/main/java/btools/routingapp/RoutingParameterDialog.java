@@ -4,11 +4,14 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -144,7 +147,7 @@ public class RoutingParameterDialog extends AppCompatActivity {
               list.add(p);
             }
           } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, Log.getStackTraceString(e));
           }
         }
       } while (line != null);
@@ -167,39 +170,55 @@ public class RoutingParameterDialog extends AppCompatActivity {
         new OnBackInvokedCallback() {
           @Override
           public void onBackInvoked() {
-            StringBuilder sb = null;
-            if (sharedValues != null) {
-              // fill preference with used params
-              // for direct use in the BRouter interface "extraParams"
-              sb = new StringBuilder();
-              for (Map.Entry<String, ?> entry : sharedValues.getAll().entrySet()) {
-                if (!entry.getKey().equals("params")) {
-                  sb.append(sb.length() > 0 ? "&" : "")
-                    .append(entry.getKey())
-                    .append("=");
-                  String s = entry.getValue().toString();
-                  if (s.equals("true")) s = "1";
-                  else if (s.equals("false")) s = "0";
-                  sb.append(s);
-                }
-              }
-            }
-            // and return the array
-            // one should be enough
-            Intent i = new Intent();
-            // i.putExtra("PARAMS", listParams);
-            i.putExtra("PROFILE", profile);
-            i.putExtra("PROFILE_HASH", profile_hash);
-            if (sb != null) i.putExtra("PARAMS_VALUES", sb.toString());
-
-            setResult(Activity.RESULT_OK, i);
-            finish();
+            handleBackPressed();
           }
         }
       );
-
-
+    } else {
+      OnBackPressedCallback callback = new OnBackPressedCallback(true) {
+        @Override
+        public void handleOnBackPressed() {
+          handleBackPressed();
+        }
+      };
+      getOnBackPressedDispatcher().addCallback(this, callback);
     }
+  }
+
+  private void handleBackPressed() {
+    StringBuilder sb = null;
+    if (sharedValues != null) {
+      // fill preference with used params
+      // for direct use in the BRouter interface "extraParams"
+      sb = new StringBuilder();
+      for (Map.Entry<String, ?> entry : sharedValues.getAll().entrySet()) {
+        if (!entry.getKey().equals("params")) {
+          sb.append(sb.length() > 0 ? "&" : "")
+            .append(entry.getKey())
+            .append("=");
+          String s = entry.getValue().toString();
+          if (s.equals("true")) s = "1";
+          else if (s.equals("false")) s = "0";
+          sb.append(s);
+        }
+      }
+    }
+    // and return the array
+    // one should be enough
+    Intent i = new Intent();
+    // i.putExtra("PARAMS", listParams);
+    i.putExtra("PROFILE", profile);
+    i.putExtra("PROFILE_HASH", profile_hash);
+    if (sb != null) i.putExtra("PARAMS_VALUES", sb.toString());
+
+    setResult(Activity.RESULT_OK, i);
+    finish();
+
+  }
+
+  @Override
+  public void onConfigurationChanged(Configuration newConfig) {
+    super.onConfigurationChanged(newConfig);
   }
 
 
@@ -222,6 +241,7 @@ public class RoutingParameterDialog extends AppCompatActivity {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
 
@@ -244,10 +264,10 @@ public class RoutingParameterDialog extends AppCompatActivity {
 
         if (i.hasExtra("PARAMS")) {
           List<?> result;
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            result = (List<?>) i.getExtras().getSerializable("PARAMS", ArrayList.class);
-          } else {
+          if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             result = (List<?>) i.getExtras().getSerializable("PARAMS");
+          } else {
+            result = (List<?>) i.getExtras().getSerializable("PARAMS", ArrayList.class);
           }
           if (result instanceof ArrayList) {
             for (Object o : result) {
@@ -259,7 +279,7 @@ public class RoutingParameterDialog extends AppCompatActivity {
           sparams = i.getExtras().getString("PARAMS_VALUES", "");
         }
       } catch (Exception e) {
-        e.printStackTrace();
+        Log.e(TAG, Log.getStackTraceString(e));
       }
 
       getPreferenceManager().setSharedPreferencesName("prefs_profile_" + profile_hash);
@@ -357,8 +377,8 @@ public class RoutingParameterDialog extends AppCompatActivity {
             for (String tmp : sa) {
               // Add the name and address to the ListPreference enties and entyValues
               //L.v("AFTrack", "device: "+device.getName() + " -- " + device.getAddress());
-              entryValues[i] = "" + i;
               entries[i] = tmp.trim();
+              entryValues[i] = entries[i].split("=")[0].trim();
               if (entryValues[i].equals(s)) ii = i;
               i++;
             }
@@ -374,11 +394,14 @@ public class RoutingParameterDialog extends AppCompatActivity {
             listPref.setSummary(p.description);
             listPref.setOnPreferenceChangeListener((Preference preference, Object newValue) -> {
               p.value = (String) newValue;
-              int iii = Integer.decode(p.value);
-              listPref.setTitle(p.name + ": " + entries[iii]);
-
+              for (int iii = 0; iii < entryValues.length; iii++) {
+                String entryValue = entryValues[iii];
+                if (entryValue.equals(p.value)) {
+                  listPref.setTitle(p.name + ": " + entries[iii]);
+                  break;
+                }
+              }
               return true;
-
             });
 
             gpsPrefCat.addPreference(listPref);

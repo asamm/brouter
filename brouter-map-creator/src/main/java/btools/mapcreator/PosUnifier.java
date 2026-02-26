@@ -7,7 +7,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import btools.util.CompactLongSet;
 import btools.util.DiffCoderDataOutputStream;
@@ -22,16 +21,21 @@ import btools.util.FrozenLongSet;
  * @author ab
  */
 public class PosUnifier extends MapCreatorBase {
+
+  public static final boolean UseRasterRd5FileName = false;
+
   private DiffCoderDataOutputStream nodesOutStream;
   private DiffCoderDataOutputStream borderNodesOut;
   private File nodeTilesOut;
+  private File outNodeFile;
   private CompactLongSet[] positionSets;
 
-  private Map<String, SrtmRaster> srtmmap;
+  private Map<String, ElevationRaster> srtmmap;
   private int lastSrtmLonIdx;
   private int lastSrtmLatIdx;
-  private SrtmRaster lastSrtmRaster;
+  private ElevationRaster lastSrtmRaster;
   private String srtmdir;
+  private String srtmfallbackdir;
 
   private CompactLongSet borderNids;
 
@@ -45,25 +49,40 @@ public class PosUnifier extends MapCreatorBase {
       double lat = Double.parseDouble(args[2]);
 
       NodeData n = new NodeData(1, lon, lat);
-      SrtmRaster srtm = posu.hgtForNode(n.ilon, n.ilat);
       short selev = Short.MIN_VALUE;
+      ElevationRaster srtm = null;
+      /*
+      // check hgt direct
+      srtm = posu.hgtForNode(n.ilon, n.ilat);
+      if (srtm != null) {
+        selev = srtm.getElevation(n.ilon, n.ilat);
+      } else {
+        System.out.println("hgtForNode no data");
+      }
+      posu.resetElevationRaster();
+      System.out.println("-----> selv for hgt " + lat + ", " + lon + " = " + selev + " = " + (selev / 4.));
+      srtm = null;
+      selev = Short.MIN_VALUE;
+      */
       if (srtm == null) {
         srtm = posu.srtmForNode(n.ilon, n.ilat);
       }
       if (srtm != null) selev = srtm.getElevation(n.ilon, n.ilat);
-      posu.resetSrtm();
-      System.out.println("-----> selv for " + lat + ", " + lon + " = " + selev + " = " + (selev / 4.));
+      posu.resetElevationRaster();
+      System.out.println("-----> selv for bef " + lat + ", " + lon + " = " + selev + " = " + (selev / 4.));
       return;
-    } else if (args.length != 5) {
-      System.out.println("usage: java PosUnifier <node-tiles-in> <node-tiles-out> <bordernids-in> <bordernodes-out> <srtm-data-dir>");
+    } else if (args.length != 5 && args.length != 6) {
+      System.out.println("usage: java PosUnifier <node-tiles-in> <node-tiles-out> <bordernids-in> <bordernodes-out> <srtm-data-dir> [srtm-fallback-data-dir]");
+      System.out.println("or     java PosUnifier <srtm-data-dir> <lon> <lat>");
       return;
     }
-    new PosUnifier().process(new File(args[0]), new File(args[1]), new File(args[2]), new File(args[3]), args[4]);
+    new PosUnifier().process(new File(args[0]), new File(args[1]), new File(args[2]), new File(args[3]), args[4], (args.length == 6 ? args[5] : null));
   }
 
-  public void process(File nodeTilesIn, File nodeTilesOut, File bordernidsinfile, File bordernodesoutfile, String srtmdir) throws Exception {
+  public void process(File nodeTilesIn, File nodeTilesOut, File bordernidsinfile, File bordernodesoutfile, String srtmdir, String srtmfallbackdir) throws Exception {
     this.nodeTilesOut = nodeTilesOut;
     this.srtmdir = srtmdir;
+    this.srtmfallbackdir = srtmfallbackdir;
 
     // read border nids set
     DataInputStream dis = createInStream(bordernidsinfile);
@@ -87,9 +106,9 @@ public class PosUnifier extends MapCreatorBase {
 
   @Override
   public void nodeFileStart(File nodefile) throws Exception {
-    resetSrtm();
-
-    nodesOutStream = createOutStream(fileFromTemplate(nodefile, nodeTilesOut, "u5d"));
+    resetElevationRaster();
+    outNodeFile = fileFromTemplate(nodefile, nodeTilesOut, "u5d");
+    nodesOutStream = createOutStream(outNodeFile);
 
     positionSets = new CompactLongSet[2500];
   }
@@ -105,7 +124,7 @@ public class PosUnifier extends MapCreatorBase {
       srtm = srtmForNode(n.ilon, n.ilat);
     } */
 
-    SrtmRaster srtm = srtmForNode(n.ilon, n.ilat);
+    ElevationRaster srtm = srtmForNode(n.ilon, n.ilat);
 
     if (srtm != null) n.selev = srtm.getElevation(n.ilon, n.ilat);
     findUniquePos(n);
@@ -119,7 +138,13 @@ public class PosUnifier extends MapCreatorBase {
   @Override
   public void nodeFileEnd(File nodeFile) throws Exception {
     nodesOutStream.close();
-    resetSrtm();
+    if (outNodeFile != null) {
+      if (lastSrtmRaster != null) {
+        String newName = outNodeFile.getAbsolutePath() + (lastSrtmRaster.nrows > 6001 ? "_1": "_3");
+        outNodeFile.renameTo(new File(newName));
+      }
+    }
+    resetElevationRaster();
   }
 
   private boolean checkAdd(int lon, int lat) {
