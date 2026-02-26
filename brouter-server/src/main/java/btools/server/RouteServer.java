@@ -1,21 +1,20 @@
 package btools.server;
 
-import btools.router.*;
-import btools.server.request.ProfileUploadHandler;
-import btools.server.request.RequestHandler;
-import btools.server.request.ServerHandler;
-import btools.util.StackSampler;
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.io.Writer;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URLDecoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.zip.GZIPOutputStream;
-
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +24,17 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.StringTokenizer;
 import java.util.zip.GZIPOutputStream;
+
+import btools.router.OsmNodeNamed;
+import btools.router.OsmTrack;
+import btools.router.ProfileCache;
+import btools.router.RoutingContext;
+import btools.router.RoutingEngine;
+import btools.router.RoutingParamCollector;
+import btools.server.request.ProfileUploadHandler;
+import btools.server.request.RequestHandler;
+import btools.server.request.ServerHandler;
+import btools.util.StackSampler;
 
 public class RouteServer extends Thread implements Comparable<RouteServer> {
   public static final String PROFILE_UPLOAD_URL = "/brouter/profile";
@@ -174,11 +184,6 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
         writeHttpHeader(bw, url.endsWith(".json") ? "application/json" : "text/html", HTTP_STATUS_OK);
         SuspectManager.process(url, bw);
         return;
-      } else if (url.startsWith("/brouter/health")) {
-        writeHttpHeader(bw, "text/plain", HTTP_STATUS_OK);
-        bw.write("Brouter server alive");
-        bw.flush();
-        return;
       } else {
         writeHttpHeader(bw, HTTP_STATUS_NOT_FOUND);
         bw.flush();
@@ -190,41 +195,16 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
       if (wplist.size() < 10) {
         SuspectManager.nearRecentWps.add(wplist);
       }
+      if (params.containsKey("profile")) {
+        // already handled in readRoutingContext
+        params.remove("profile");
+      }
       int engineMode = 0;
-      for (Map.Entry<String, String> e : params.entrySet()) {
-        if ("engineMode".equals(e.getKey())) {
-          engineMode = Integer.parseInt(e.getValue());
-        } else if ("timode".equals(e.getKey())) {
-          rc.turnInstructionMode = Integer.parseInt(e.getValue());
-        } else if ("heading".equals(e.getKey())) {
-          rc.startDirection = Integer.parseInt(e.getValue());
-          rc.forceUseStartDirection = true;
-        } else if (e.getKey().startsWith("profile:")) {
-          if (rc.keyValues == null) {
-            rc.keyValues = new HashMap<>();
-          }
-          rc.keyValues.put(e.getKey().substring(8), e.getValue());
-        } else if (e.getKey().equals("straight")) {
-          String[] sa = e.getValue().split(",");
-          for (int i = 0; i < sa.length; i++) {
-            int v = Integer.parseInt(sa[i]);
-            if (wplist.size() > v) wplist.get(v).direct = true;
-          }
-        }
+      if (params.containsKey("engineMode")) {
+        engineMode = Integer.parseInt(params.get("engineMode"));
       }
+      routingParamCollector.setParams(rc, wplist, params);
 
-      double wptCatchRange = RoutingEngine.DEFAULT_MAX_DIST_WPT_NODE;
-      if (params.containsKey("wptNodeMax")) {
-        try {
-          wptCatchRange = Double.parseDouble(params.get("wptNodeMax"));
-        } catch (Exception e) {
-          System.out.println(e.getMessage());
-        }
-      }
-      if (wptCatchRange > RoutingEngine.MAXIMUM_MAX_DIST_WPT_NODE)
-        wptCatchRange = RoutingEngine.MAXIMUM_MAX_DIST_WPT_NODE;
-
-      rc.waypointCatchingRange = wptCatchRange;
       cr = new RoutingEngine(null, null, serviceContext.segmentDir, wplist, rc, engineMode);
       cr.quite = true;
       cr.doRun(maxRunningTime);
