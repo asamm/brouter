@@ -37,6 +37,7 @@ import btools.server.request.ServerHandler;
 import btools.util.StackSampler;
 
 public class RouteServer extends Thread implements Comparable<RouteServer> {
+  public static final String HEALTH_CHECK_URL = "/brouter/health";
   public static final String PROFILE_UPLOAD_URL = "/brouter/profile";
   static final String HTTP_STATUS_OK = "200 OK";
   static final String HTTP_STATUS_BAD_REQUEST = "400 Bad Request";
@@ -143,6 +144,17 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
         writeHttpHeader(bw, HTTP_STATUS_OK);
         bw.write("User-agent: *\n");
         bw.write("Disallow: /\n");
+        bw.flush();
+        return;
+      }
+      if (getline.startsWith("GET " + HEALTH_CHECK_URL)) {
+        String body = "Brouter server alive";
+
+        bw.write("HTTP/1.1 200 OK\r\n");
+        bw.write("Content-Type: text/plain\r\n");
+        bw.write("Content-Length: " + body.length() + "\r\n");
+        bw.write("\r\n");
+        bw.write(body);
         bw.flush();
         return;
       }
