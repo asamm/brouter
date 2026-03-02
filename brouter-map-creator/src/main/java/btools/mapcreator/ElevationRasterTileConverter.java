@@ -19,7 +19,7 @@ import java.util.zip.ZipInputStream;
 
 public class ElevationRasterTileConverter {
 
-  public static final boolean DEBUG = false;
+  public static final boolean DEBUG = true;
 
   public static final short NODATA2 = -32767; // hgt-formats nodata
   public static final short NODATA = Short.MIN_VALUE;
@@ -334,6 +334,8 @@ public class ElevationRasterTileConverter {
           filename = filename.substring(0, filename.length() - 4) + ".hgt";
           f = new File(filename);
           if (f.exists() && f.length() > 0) {
+            if (DEBUG)
+              System.out.println("found primary: " + f.getAbsolutePath());
             hgtfound = true;
             break;
           }
@@ -388,9 +390,16 @@ public class ElevationRasterTileConverter {
             if (hgtfallbackdata != null) {
               filename = hgtfallbackdata + "/" + formatLat(latDegree) + formatLon(lonDegree) + ".hgt";
               f = new File(filename);
+              if (DEBUG)
+                System.out.println("trying hgt fallback: " + f.getAbsolutePath());
               if (f.exists() && f.length() > 0) {
                 readHgtFile(f, rowOffset, colOffset, SRTM3_ROW_LENGTH + 1, 3);
+                if (DEBUG)
+                  System.out.println("read hgt fallback: " + f.getAbsolutePath());
                 continue;
+              } else {
+                if (DEBUG)
+                  System.out.println("failure for hgt fallback: " + f.getAbsolutePath());
               }
               filename = filename.substring(0, filename.length() - 4) + ".zip";
               f = new File(filename);
@@ -398,7 +407,7 @@ public class ElevationRasterTileConverter {
                 readHgtZip(filename, rowOffset, colOffset, SRTM3_ROW_LENGTH + 1, 3);
               } else {
                 if (DEBUG)
-                  System.out.println("none : " + filename);
+                  System.out.println("none: " + filename);
               }
             }
 
