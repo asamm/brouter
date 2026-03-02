@@ -510,7 +510,7 @@ public class RoutingEngine extends Thread {
         buildPointsFromCircle(waypoints, direction, searchRadius, routingContext.roundTripPoints == null ? 5 : routingContext.roundTripPoints);
       }
 
-      routingContext.waypointCatchingRange = 250;
+      routingContext.waypointCatchingRange = RoutingContext.extendedWaypointCatchingRange;
 
       doRouting(0);
 
