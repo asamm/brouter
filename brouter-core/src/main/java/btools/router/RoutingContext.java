@@ -29,6 +29,7 @@ public final class RoutingContext {
     return alternativeIdx < min ? min : (alternativeIdx > max ? max : alternativeIdx);
   }
 
+  // Asamm specific, a bit higher value (250 is Brouter default). Prevents "No routable roads nearby" error.
   public static final float extendedWaypointCatchingRange = 400.0F;
 
   public int alternativeIdx = 0;

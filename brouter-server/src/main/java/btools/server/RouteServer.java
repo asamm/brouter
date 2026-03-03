@@ -147,9 +147,9 @@ public class RouteServer extends Thread implements Comparable<RouteServer> {
         bw.flush();
         return;
       }
+      // load balancer health checks
       if (getline.startsWith("GET " + HEALTH_CHECK_URL)) {
         String body = "Brouter server alive";
-
         bw.write("HTTP/1.1 200 OK\r\n");
         bw.write("Content-Type: text/plain\r\n");
         bw.write("Content-Length: " + body.length() + "\r\n");
