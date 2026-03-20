@@ -37,7 +37,10 @@ assign   consider_smoothness    1     # 1 as default
 assign   allow_steps            1     # 1 as default
 assign   allow_ferries          true  # %allow_ferries% true as default
 assign   allow_traffic_penalty  1     # 1 as default
-                                                              
+
+assign   maxSpeed               40    # %maxSpeed%
+assign   bikerPower             100   # %bikerPower%
+
 assign   StrictNOBicycleaccess       0 # 0 allows but penalizes foot only access / 1 forbides foot only access.
 assign   valley_nonflat_multiplier = 2.0
 

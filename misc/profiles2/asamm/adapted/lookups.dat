@@ -1,5 +1,5 @@
 ---lookupversion:10
----minorversion:14
+---minorversion:15
 
 ---context:way
 
@@ -767,6 +767,178 @@ brouter_warning_feature_dummy_42;0000000001 dummy
 oneway:foot;0000000001 yes
 foot:backward;0000000001 no
 
+highway;0000000001 busway
+highway;0000000001 elevator
+highway;0000000001 via_ferrata
+surface;0000000001 stone
+lit;0000000001 no
+lit;0000000001 sunset-sunrise
+lit;0000000001 24/7
+lit;0000000001 automatic
+service;0000000001 yard
+service;0000000001 spur
+service;0000000001 siding
+service;0000000001 crossover
+access;0000000001 permit
+access;0000000001 military
+lanes;0000000001 8
+foot;0000000001 permit
+bicycle;0000000001 permit
+bridge;0000000001 boardwalk
+bridge;0000000001 aqueduct
+bridge;0000000001 movable
+railway;0000000001 funicular
+railway;0000000001 monorail
+motor_vehicle;0000000001 permit
+motorcar;0000000001 permit
+motorcycle;0000000001 permit
+moped;0000000001 no
+moped;0000000001 yes
+moped;0000000001 designated
+moped;0000000001 use_sidepath
+mofa;0000000001 no
+mofa;0000000001 yes
+mofa;0000000001 designated
+mofa;0000000001 use_sidepath
+atv;0000000001 no
+atv;0000000001 yes
+atv;0000000001 designated
+atv;0000000001 private
+atv;0000000001 permissive
+vehicle;0000000001 permit
+vehicle;0000000001 military
+vehicle;0000000001 emergency
+agricultural;0000000001 no
+agricultural;0000000001 yes
+agricultural;0000000001 designated
+agricultural;0000000001 permissive
+agricultural;0000000001 private
+agricultural;0000000001 destination
+cycleway:both;0000000001 lane
+cycleway:both;0000000001 shared_lane
+cycleway:both;0000000001 no
+cycleway:both;0000000001 track
+cycleway:both;0000000001 separate
+cycleway:both;0000000001 share_busway
+cycleway:both;0000000001 shared
+cycleway:both;0000000001 yes
+cycleway:both;0000000001 shoulder
+conveying;0000000001 yes
+conveying;0000000001 backward
+conveying;0000000001 forward
+path;0000000001 crossing
+man_made;0000000001 pier
+public_transport;0000000001 platform
+shoulder;0000000001 yes
+shoulder;0000000001 no
+shoulder;0000000001 right
+shoulder;0000000001 left
+shoulder;0000000001 both
+shoulder:right;0000000001 yes
+cycleway:lane;0000000001 advisory
+cycleway:lane;0000000001 exclusive
+cycleway:lane;0000000001 pictogram
+cycleway:both:lane;0000000001 advisory
+cycleway:both:lane;0000000001 exclusive
+cycleway:both:lane;0000000001 pictogram
+cycleway:right:lane;0000000001 advisory
+cycleway:right:lane;0000000001 exclusive
+cycleway:right:lane;0000000001 pictogram
+cycleway:left:lane;0000000001 advisory
+cycleway:left:lane;0000000001 exclusive
+cycleway:left:lane;0000000001 pictogram
+toll:motorcycle;0000000001 no
+obstacle;0000000001 vegetation
+obstacle;0000000001 fallen_tree
+obstacle;0000000001 bridge
+bicycle:forward;0000000001 yes
+bicycle:forward;0000000001 designated
+bicycle:forward;0000000001 use_sidepath
+bicycle:forward;0000000001 no
+bicycle:backward;0000000001 yes
+bicycle:backward;0000000001 designated
+bicycle:backward;0000000001 use_sidepath
+bicycle:backward;0000000001 no
+speed_pedelec;0000000001 yes
+speed_pedelec;0000000001 designated
+speed_pedelec;0000000001 use_sidepath
+speed_pedelec;0000000001 no
+piste:type;0000000001 downhill
+piste:type;0000000001 sled
+piste:type;0000000001 hiking
+piste:type;0000000001 sleigh
+piste:type;0000000001 connection
+piste:grooming;0000000001 mogul
+busway;0000000001 lane
+busway;0000000001 yes
+busway:left;0000000001 lane
+busway:right;0000000001 lane
+footway:surface;0000000001 asphalt
+footway:surface;0000000001 paved
+footway:surface;0000000001 unpaved
+footway:surface;0000000001 gravel
+footway:surface;0000000001 concrete
+footway:surface;0000000001 paving_stones
+footway:surface;0000000001 cobblestone
+footway:surface;0000000001 compacted
+footway:surface;0000000001 fine_gravel
+footway:surface;0000000001 sett
+footway:surface;0000000001 wood
+sidewalk:bicycle;0000000001 designated
+sidewalk:left:bicycle;0000000001 designated
+sidewalk:right:bicycle;0000000001 designated
+sidewalk:left;0000000001 no
+sidewalk:left;0000000001 separate
+sidewalk:left;0000000001 yes
+sidewalk:left;0000000001 designated
+sidewalk:right;0000000001 no
+sidewalk:right;0000000001 separate
+sidewalk:right;0000000001 yes
+sidewalk:right;0000000001 designated
+sidewalk:both;0000000001 no
+sidewalk:both;0000000001 yes
+sidewalk:both;0000000001 separate
+bicycle_road;0000000001 designated
+cyclestreet;0000000001 yes
+cyclestreet;0000000001 designated
+traffic_calming;0000000001 bump
+traffic_calming;0000000001 hump
+traffic_calming;0000000001 table
+traffic_calming;0000000001 yes
+traffic_calming;0000000001 cushion
+traffic_calming;0000000001 rumble_strip
+traffic_calming;0000000001 choker
+traffic_calming;0000000001 chicane
+traffic_calming;0000000001 choked_table
+
+estimated_forest_class;0000000001 1
+estimated_forest_class;0000000001 2
+estimated_forest_class;0000000001 3
+estimated_forest_class;0000000001 4
+estimated_forest_class;0000000001 5
+estimated_forest_class;0000000001 6
+
+estimated_noise_class;0000000001 1
+estimated_noise_class;0000000001 2
+estimated_noise_class;0000000001 3
+estimated_noise_class;0000000001 4
+estimated_noise_class;0000000001 5
+estimated_noise_class;0000000001 6
+
+estimated_river_class;0000000001 1
+estimated_river_class;0000000001 2
+estimated_river_class;0000000001 3
+estimated_river_class;0000000001 4
+estimated_river_class;0000000001 5
+estimated_river_class;0000000001 6
+
+estimated_town_class;0000000001 1
+estimated_town_class;0000000001 2
+estimated_town_class;0000000001 3
+estimated_town_class;0000000001 4
+estimated_town_class;0000000001 5
+estimated_town_class;0000000001 6
+
 ---context:node
 
 highway;0001314954 bus_stop
@@ -1024,3 +1196,40 @@ traffic_signals:direction;0000007309 both
 safety_rope;0000007309 yes *
 rungs;0000007309 yes *
 ladder;0000007309 yes *
+
+highway;0000000001 toll_gantry
+barrier;0000000001 height_restrictor
+barrier;0000000001 sliding_gate
+entrance;0000000001 secondary
+crossing;0000000001 marked
+access;0000000001 permit
+traffic_calming;0000000001 choked_table
+traffic_signals;0000000001 signal
+traffic_signals;0000000001 blinker
+traffic_signals;0000000001 tram_priority
+traffic_signals;0000000001 ramp_meter
+motor_vehicle;0000000001 permit
+kerb;0000000001 lowered
+kerb;0000000001 flush
+kerb;0000000001 raised
+kerb;0000000001 rolled
+railway;0000000001 funicular
+surface;0000000001 asphalt
+surface;0000000001 paved
+surface;0000000001 unpaved
+traffic_sign:direction;0000000001 forward
+traffic_sign:direction;0000000001 backward
+traffic_sign:direction;0000000001 both
+give_way:direction;0000000001 forward
+give_way:direction;0000000001 backward
+stop:direction;0000000001 forward
+stop:direction;0000000001 backward
+monitoring:bicycle;0000000001 yes
+
+estimated_crossing_class;0000000001 0
+estimated_crossing_class;0000000001 1
+estimated_crossing_class;0000000001 2
+estimated_crossing_class;0000000001 3
+estimated_crossing_class;0000000001 4
+estimated_crossing_class;0000000001 5
+estimated_crossing_class;0000000001 6

@@ -16,7 +16,7 @@
 
 assign   turnInstructionMode    2 # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style
 assign   turnInstructionCatchingRange = 10
-assign   cycleroutes_pref       0.8 # also CRP *)  costfactor penalty for not being cycleroute
+assign   cycleroutes_pref       0.9 # also CRP *)  costfactor penalty for not being cycleroute
 assign   MTB_factor             -0.4 # default 0.0, *)
 assign   smallpaved_factor      0.6 # default 0.0, *)
 assign   avoid_unsafe           1 # 0 as default, gives penalty to mainroad without bike friendly status.
@@ -31,7 +31,10 @@ assign   allow_tunnels          true  # %allow_tunnels% true as default
 assign   allow_ferries          true  # %allow_ferries% true as default
 assign   allow_steps            false  
 assign   allow_traffic_penalty  1     # 1 as default
-                                                              
+
+assign   maxSpeed               40    # %maxSpeed%
+assign   bikerPower             100   # %bikerPower%
+
 assign   StrictNOBicycleaccess  0 # 0 allows but penalizes foot only access / 1 forbides foot only access.
 assign   valley_nonflat_multiplier  2.0
 
@@ -55,7 +58,7 @@ assign   downhillcostvalue      switch equal hills 1 100   switch equal hills 2 
 assign   Flat_Penalty         if NoFlatMode then 1.5 else 0.0
 
 assign   validForBikes        1
-assign   processUnusedTags    1 # 1 is old Brouter behaviour, 0 is new Brouter default, more efficient, but ignores tags not used by a profile. We need all tags for warni
+assign   processUnusedTags    1 # 1 is old Brouter behaviour, 0 is new Brouter default, more efficient, but ignores tags not used by a profile. We need all tags for warnings.
 assign   Hill_factor            min 3 max -3 sub MTB_factor smallpaved_factor             
 assign   Road_factor            min 3 max -3 ( sub ( sub 0.0 MTB_factor ) smallpaved_factor )
 
@@ -312,7 +315,7 @@ assign highwayclass_basefactor
         switch highway=trunk|trunk_link          5.8  switch highway=primary|primary_link      5.8
         switch highway=secondary|secondary_link  1.2  switch highway=tertiary|tertiary_link    1.0   1.0
       else if istrack  then 
-        switch highway=track 1.2 switch highway=path 8.0 switch highway=footway  3.2  2.2  # highway=road 
+        switch highway=track 1.0 switch highway=path 1.1 switch highway=footway  1.8  2.2  # highway=road 
       else 
         switch highway=pedestrian 2.6 switch highway=bridleway 3.4
         switch highway=cycleway   1.0 switch highway=residential|living_street   1.0

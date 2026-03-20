@@ -31,7 +31,10 @@ assign   consider_smoothness    1     # 1 as default
 assign   allow_ferries          true  # %allow_ferries% true as default
 assign   allow_steps            true  # %allow_steps% true as default
 assign   allow_traffic_penalty  1     # 1 as default
-                                                              
+
+assign   maxSpeed               40    # %maxSpeed%
+assign   bikerPower             100   # %bikerPower%
+
 assign   StrictNOBicycleaccess  0 # 0 allows but penalizes foot only access / 1 forbides foot only access.
 assign   valley_nonflat_multiplier = 2.0
 
@@ -311,7 +314,7 @@ assign highwayclass_basefactor
         switch highway=trunk|trunk_link          15.0  switch highway=primary|primary_link      15.0
         switch highway=secondary|secondary_link  1.4  switch highway=tertiary|tertiary_link    1.0   1.0
       else if istrack  then 
-        switch highway=track 1.0 switch highway=path 14.0 switch highway=footway  4.6  1.0  # highway=road 
+        switch highway=track 1.0 switch highway=path 1.4 switch highway=footway  4.6  1.0  # highway=road 
      else 
         switch highway=pedestrian 2.6 switch highway=bridleway 3.6
         switch highway=cycleway   1.2 switch highway=residential|living_street   1.0

@@ -20,7 +20,7 @@
 assign   iswet                  false # %is_wet% false as default
 assign   turnInstructionMode  = 2 # 0=none, 1=auto-choose, 2=locus-style, 3=osmand-style
 assign   turnInstructionCatchingRange = 10
-assign   cycleroutes_pref       0.5 # also CRP *)  costfactor penalty for not being cycleroute
+assign   cycleroutes_pref       0.7 # also CRP *)  costfactor penalty for not being cycleroute
 assign   MTB_factor             0.0 # default 0.0, *)
 assign   smallpaved_factor      0.0 # default 0.0, *)
 assign   avoid_unsafe           0 # 0 as default, gives penalty to mainroad without bike friendly status.
@@ -34,7 +34,10 @@ assign   consider_smoothness    1     # 1 as default
 assign   allow_ferries          true  # %allow_ferries% true as default
 assign   allow_steps            true  # %allow_steps% true as default
 assign   allow_traffic_penalty  1     # 1 as default
-                                                              
+
+assign   maxSpeed               40    # %maxSpeed%
+assign   bikerPower             100   # %bikerPower%
+
 assign   StrictNOBicycleaccess          0 # 0 allows but penalizes foot only access / 1 forbides foot only access.
 assign   valley_nonflat_multiplier = 2.0
 
@@ -327,7 +330,7 @@ assign highwayclass_basefactor
         switch highway=trunk|trunk_link          1.8  switch highway=primary|primary_link      1.5
         switch highway=secondary|secondary_link  1.2  switch highway=tertiary|tertiary_link    1.1   1.0
       else if istrack  then 
-        switch highway=track 1.0 switch highway=path 1.1 switch highway=footway  1.2  1.0  # highway=road 
+        switch highway=track 1.0 switch highway=path 1.4 switch highway=footway  1.2  1.0  # highway=road 
      else 
         switch highway=pedestrian 2.0 switch highway=bridleway 3.0
         switch highway=cycleway   1.0 switch highway=residential|living_street   1.0
@@ -358,7 +361,7 @@ assign not_isbike_penalty   if isbike then 0.0
         switch highway=secondary|secondary_link  0.4  0.3 # tertiary|tertiary_link|unclassified
      else if istrack then  
         switch highway=footway            3.5   switch or ispaved tracktype=grade1 0.0 
-        switch and tracktype= not isunpaved  ( switch highway=path 3.5 1.0 )
+        switch and tracktype= not isunpaved  ( switch highway=path 1.5 1.0 )
         switch tracktype=                 3.0   switch tracktype=grade1           0.2
         switch tracktype=grade2           0.6   switch tracktype=grade3           1.2
         switch tracktype=grade4           2.0   switch tracktype=grade5           3.0
