@@ -10,7 +10,7 @@ Nothing outside this directory is modified; the rest of the repository is only r
 
 | directory   | content |
 |-------------|---------|
-| `docs/`     | design notes: `metrics.md` (procedure), `sources.md` (background), `tables.md` (source tables of `brouter.sql`), `pgsql-import.md` (how to run the SQL part) |
+| `docs/`     | design notes: `metrics.md` (procedure), `sources.md` (background), `tables.md` (source tables of `brouter.sql`), `pgsql-import.md` (how to run the SQL part), `runtime-curvature-turncost.md` (variant: curvature at routing time selected by a negative turncost) |
 | `sql/`      | PostGIS part: `lines.sql` (table), `functions.sql` (`curv_*` functions), `curvature_tags.sql` (the tag) |
 | `python/`   | `generate_roads.py` (simulated roads), `visualize_curvature.py` (gallery with computed classes), `visualize_cost.py` (gallery with BRouter link cost from `RoadCostTest`) |
 | `jvm/`      | Kotlin tests running real BRouter code (turncost, section and link cost) |
