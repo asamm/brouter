@@ -3,6 +3,9 @@
 How to get `out/lines_data.sql` (output of `generate_roads.py`) into the database,
 into the `lines` table (defined in `lines.sql`).
 
+All commands are run from the `curvature_class` directory. The Python scripts
+write to `curvature_class/out/` regardless of the current directory.
+
 ## Prerequisites
 
 - PostgreSQL with the **PostGIS** extension (`ST_GeomFromText`, `ST_Transform`, `geography`).
@@ -41,7 +44,7 @@ psql -d curvature_test -c "CREATE EXTENSION IF NOT EXISTS postgis;"
 ## 2. The `lines` table (once)
 
 ```bash
-psql -d curvature_test -v ON_ERROR_STOP=1 -f lines.sql
+psql -d curvature_test -v ON_ERROR_STOP=1 -f sql/lines.sql
 ```
 
 Creates the `lines` table in the shape `brouter.sql` works with after its initial
@@ -52,7 +55,7 @@ drop it first: `psql -d curvature_test -c "DROP TABLE lines;"`.
 ## 3. Generating and importing data (repeatedly)
 
 ```bash
-python3 generate_roads.py --count 60 --seed 1
+python3 python/generate_roads.py --count 60 --seed 1
 psql -d curvature_test -v ON_ERROR_STOP=1 -1 -f out/lines_data.sql
 ```
 
@@ -107,8 +110,8 @@ LIMIT 10;"
 ## 5. Functions and curvature class
 
 ```bash
-psql -d curvature_test -v ON_ERROR_STOP=1 -f functions.sql
-psql -d curvature_test -v ON_ERROR_STOP=1 -f curvature_tags.sql
+psql -d curvature_test -v ON_ERROR_STOP=1 -f sql/functions.sql
+psql -d curvature_test -v ON_ERROR_STOP=1 -f sql/curvature_tags.sql
 ```
 
 - `functions.sql` loads the functions `curv_resample`, `curv_radii`, `curv_bands`,
@@ -140,7 +143,7 @@ ORDER BY
 ## 6. Visualizing the result
 
 ```bash
-python3 visualize_curvature.py --db curvature_test
+python3 python/visualize_curvature.py --db curvature_test
 ```
 
 Creates `out/roads_curvature.svg`: the same gallery as `out/roads.svg` (column =
@@ -160,17 +163,17 @@ cd curvature_class
 
 createdb curvature_test
 psql -d curvature_test -c "CREATE EXTENSION IF NOT EXISTS postgis;"
-psql -d curvature_test -v ON_ERROR_STOP=1 -f lines.sql
+psql -d curvature_test -v ON_ERROR_STOP=1 -f sql/lines.sql
 
-python3 generate_roads.py
+python3 python/generate_roads.py
 psql -d curvature_test -v ON_ERROR_STOP=1 -1 -f out/lines_data.sql
 
 psql -d curvature_test -c "SELECT count(*) FROM lines;"   # 60
 
-psql -d curvature_test -v ON_ERROR_STOP=1 -f functions.sql
-psql -d curvature_test -v ON_ERROR_STOP=1 -f curvature_tags.sql   # 30 ways with a class
+psql -d curvature_test -v ON_ERROR_STOP=1 -f sql/functions.sql
+psql -d curvature_test -v ON_ERROR_STOP=1 -f sql/curvature_tags.sql   # 30 ways with a class
 
-python3 visualize_curvature.py --db curvature_test   # out/roads_curvature.svg
+python3 python/visualize_curvature.py --db curvature_test   # out/roads_curvature.svg
 ```
 
 With a remote server, just add the connection parameters, e.g.

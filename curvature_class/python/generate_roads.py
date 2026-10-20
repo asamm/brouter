@@ -21,6 +21,9 @@ import random
 import statistics
 from pathlib import Path
 
+# curvature_class/out, independent of the current directory
+OUT_DIR = Path(__file__).resolve().parent.parent / "out"
+
 R_EARTH = 6378137.0  # sphere radius used by Web Mercator (EPSG:3857)
 OSM_ID_BASE = 9_000_000_000  # far above real OSM way ids => no collision
 NODE_ID_BASE = 9_100_000_000  # simulated node ids (lines.nodes)
@@ -456,7 +459,7 @@ def main():
     ap.add_argument("--seed", type=int, default=1, help="random seed, same seed = same roads (default 1)")
     ap.add_argument("--lat", type=float, default=50.0, help="latitude of the first road (default 50.0)")
     ap.add_argument("--lon", type=float, default=15.0, help="longitude of the first road (default 15.0)")
-    ap.add_argument("--out-dir", type=Path, default=Path("out"), help="output directory (default ./out)")
+    ap.add_argument("--out-dir", type=Path, default=OUT_DIR, help="output directory (default curvature_class/out)")
     args = ap.parse_args()
 
     roads = generate(args.count, args.seed, args.lat, args.lon)

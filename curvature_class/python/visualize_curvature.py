@@ -14,7 +14,7 @@ Without a database: --csv with the output of the query QUERY below
 (psql --csv -c "<QUERY>" > classes.csv).
 
 Run after curvature_tags.sql:
-  python3 visualize_curvature.py --db curvature_test
+  python3 python/visualize_curvature.py --db curvature_test
 
 Only the Python standard library is used.
 """
@@ -28,7 +28,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from generate_roads import ROAD_TYPES, curviness, nice_scale
+from generate_roads import OUT_DIR, ROAD_TYPES, curviness, nice_scale
 
 # one row per road in lines; curvature_class = the tag (curvature_tags),
 # class_by_score = without the hairpin rule
@@ -219,10 +219,10 @@ def write_svg(roads, values, path, tile=230):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--roads", type=Path, default=Path("out/roads.json"), help="roads from generate_roads.py (default out/roads.json)")
+    ap.add_argument("--roads", type=Path, default=OUT_DIR / "roads.json", help="roads from generate_roads.py (default curvature_class/out/roads.json)")
     ap.add_argument("--db", help="database name or connection string for psql (default: PG* variables)")
     ap.add_argument("--csv", type=Path, help="computed values from a file instead of the database (columns of QUERY)")
-    ap.add_argument("--out", type=Path, default=Path("out/roads_curvature.svg"), help="output (default out/roads_curvature.svg)")
+    ap.add_argument("--out", type=Path, default=OUT_DIR / "roads_curvature.svg", help="output (default curvature_class/out/roads_curvature.svg)")
     args = ap.parse_args()
 
     roads = json.loads(args.roads.read_text(encoding="utf-8"))
