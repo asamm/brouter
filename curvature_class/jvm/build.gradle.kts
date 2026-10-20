@@ -1,5 +1,7 @@
 plugins {
     kotlin("jvm") version "2.2.20"
+    // JSON in/out (out/roads.json -> out/roads_cost.json)
+    kotlin("plugin.serialization") version "2.2.20"
 }
 
 repositories {
@@ -14,6 +16,7 @@ dependencies {
     testImplementation("org.btools:brouter-util:1.7.8")
     testImplementation("org.btools:brouter-codec:1.7.8")
     testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 }
 
 tasks.test {

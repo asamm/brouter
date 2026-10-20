@@ -65,17 +65,28 @@ class Turn(deg: Double) {
     val cosangle: Double
 
     init {
-        val lon1 = 195_000_000 // 15.0 E
-        val lat1 = 140_000_000 // 50.0 N
-        val (lon2m, lat2m) = CheapRuler.getLonLatToMeterScales(lat1).let { it[0] to it[1] }
         val rad = Math.toRadians(deg)
-        val lon0 = lon1
-        val lat0 = lat1 - (100.0 / lat2m).roundToInt()
-        val lon2 = lon1 + (100.0 * sin(rad) / lon2m).roundToInt()
-        val lat2 = lat1 + (100.0 * cos(rad) / lat2m).roundToInt()
+        val (lon0, lat0) = toILonLat(0.0, -100.0)
+        val (lon1, lat1) = toILonLat(0.0, 0.0)
+        val (lon2, lat2) = toILonLat(100.0 * sin(rad), 100.0 * cos(rad))
 
         val meter = RoutingContext().anglemeter
         angle = meter.calcAngle(lon0, lat0, lon1, lat1, lon2, lat2)
         cosangle = meter.cosAngle
     }
+}
+
+/**
+ * Local metric plane (x = east, y = north, metres, as points_local in out/roads.json)
+ * -> BRouter integer coordinates: ilon = (lon + 180) * 1e6, ilat = (lat + 90) * 1e6.
+ * The origin is 15.0 E / 50.0 N. The metre scale is taken at the origin (CheapRuler,
+ * the same scales BRouter uses); over a few km its change is far below 0.1 %.
+ * Rounding to whole microdegrees (~0.07 m east, ~0.11 m north) is the same
+ * quantization real map data has.
+ */
+fun toILonLat(x: Double, y: Double): Pair<Int, Int> {
+    val originILon = 195_000_000 // 15.0 E
+    val originILat = 140_000_000 // 50.0 N
+    val (lon2m, lat2m) = CheapRuler.getLonLatToMeterScales(originILat).let { it[0] to it[1] }
+    return (originILon + (x / lon2m).roundToInt()) to (originILat + (y / lat2m).roundToInt())
 }

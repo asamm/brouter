@@ -12,7 +12,7 @@ Nothing outside this directory is modified; the rest of the repository is only r
 |-------------|---------|
 | `docs/`     | design notes: `metrics.md` (procedure), `sources.md` (background), `tables.md` (source tables of `brouter.sql`), `pgsql-import.md` (how to run the SQL part) |
 | `sql/`      | PostGIS part: `lines.sql` (table), `functions.sql` (`curv_*` functions), `curvature_tags.sql` (the tag) |
-| `python/`   | `generate_roads.py` (simulated roads), `visualize_curvature.py` (gallery with computed classes) |
+| `python/`   | `generate_roads.py` (simulated roads), `visualize_curvature.py` (gallery with computed classes), `visualize_cost.py` (gallery with BRouter link cost from `RoadCostTest`) |
 | `jvm/`      | Kotlin tests running real BRouter code (turncost, section and link cost) |
 | `profiles/` | test `.brf` profiles, see `profiles/README.md` |
 | `upstream/` | verbatim copies of code from the repository, see `upstream/README.md` |
@@ -36,4 +36,12 @@ JVM tests (Gradle wrapper from the repository root, BRouter is included as a com
 ```bash
 cd jvm
 ../../gradlew test
+```
+
+BRouter link cost of the simulated roads (turncost 0 / 90 / -20 / -50), then the gallery
+`out/roads_cost_tc<turncost>.svg`:
+
+```bash
+(cd jvm && ../../gradlew test --tests 'btools.router.RoadCostTest')
+python3 python/visualize_cost.py
 ```
