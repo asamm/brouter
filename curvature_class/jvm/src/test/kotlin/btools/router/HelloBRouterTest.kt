@@ -7,6 +7,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+/**
+ * Run (from curvature_class/jvm):
+ *   ../../gradlew test --tests 'btools.router.HelloBRouterTest'
+ */
 class HelloBRouterTest {
 
     @Test

@@ -12,6 +12,7 @@ dependencies {
     testImplementation("org.btools:brouter-mapaccess:1.7.8")
     testImplementation("org.btools:brouter-expressions:1.7.8")
     testImplementation("org.btools:brouter-util:1.7.8")
+    testImplementation("org.btools:brouter-codec:1.7.8")
     testImplementation(kotlin("test"))
 }
 
