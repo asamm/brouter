@@ -80,6 +80,10 @@ can select the algorithm.
 
 ## Where it would hook in
 
+Superseded for the chosen window algorithm: a correction at the end of the link instead
+of a pre-pass, see "Integration into OsmPath / StdPath" in `runtime-curvature-window.md`.
+The original sketch:
+
 1. **`OsmPath.addAddionalPenalty`, after `OsmPath.java:196-197`:** if `turncost <= -11`,
    walk the transfer node list once (plus `sourceNode` and `targetNode`) and compute the
    curvature value `c` in `[0.0, 1.0]` with the algorithm selected by the code. Store it in
