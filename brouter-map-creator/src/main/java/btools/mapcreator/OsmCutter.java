@@ -57,6 +57,8 @@ public class OsmCutter extends MapCreatorBase {
   private BExpressionContextWay _expctxWay;
   private BExpressionContextNode _expctxNode;
 
+  boolean showLookupEntries = Boolean.getBoolean("showLookupEntries");
+
   public void process(File lookupFile, File outTileDir, File wayFile, File relFile, File resFile, File profileFile, File mapFile) throws Exception {
     if (!lookupFile.exists()) {
       throw new IllegalArgumentException("lookup-file: " + lookupFile + " does not exist");
@@ -96,16 +98,18 @@ public class OsmCutter extends MapCreatorBase {
       restrictionsDos.close();
     }
 
-//    System.out.println( "-------- way-statistics -------- " );
-//    _expctxWayStat.dumpStatistics();
-//    System.out.println( "-------- node-statistics -------- " );
-//    _expctxNodeStat.dumpStatistics();
-
+    if (showLookupEntries) {
+      System.out.println("-------- way-statistics -------- ");
+      _expctxWay.dumpStatistics();
+      System.out.println("-------- node-statistics -------- ");
+      _expctxNode.dumpStatistics();
+      System.out.println("--------------------------------- ");
+    }
     System.out.println(statsLine());
   }
 
   private void checkStats() {
-    if ((++recordCnt % 100000) == 0) System.out.println(statsLine());
+    if ((++recordCnt % 1000000) == 0) System.out.println(statsLine());
   }
 
   private String statsLine() {
@@ -125,7 +129,12 @@ public class OsmCutter extends MapCreatorBase {
     nodesParsed++;
     checkStats();
 
+    if (dbPseudoTagProvider != null) {
+      dbPseudoTagProvider.addNodeTags(n);
+    }
+
     if (n.getTagsOrNull() != null) {
+      generatePseudoTags(n.getTagsOrNull());
       int[] lookupData = _expctxNode.createNewLookupData();
       for (Map.Entry<String, String> e : n.getTagsOrNull().entrySet()) {
         _expctxNode.addLookupValue(e.getKey(), e.getValue(), lookupData);
@@ -145,6 +154,14 @@ public class OsmCutter extends MapCreatorBase {
 
 
   private void generatePseudoTags(Map<String, String> map) {
+    // access=unknown collides with the reserved lookup index used for
+    // absent/unrecognized values (see BExpressionContext#addLookupValue),
+    // so it decodes identically to no access tag at all. Rewrite it here
+    // so lookups.dat can alias it to a distinct, non-fallback value.
+    if ("unknown".equals(map.get("access"))) {
+      map.put("access", "value_unknown");
+    }
+
     // add pseudo.tags for concrete:lanes and concrete:plates
 
     String concrete = null;
@@ -176,7 +193,7 @@ public class OsmCutter extends MapCreatorBase {
     if (w.getTagsOrNull() == null) return;
 
     if (dbPseudoTagProvider != null) {
-      dbPseudoTagProvider.addTags(w.wid, w.getTagsOrNull());
+      dbPseudoTagProvider.addWayTags(w.wid, w.getTagsOrNull());
     }
 
     generatePseudoTags(w.getTagsOrNull());

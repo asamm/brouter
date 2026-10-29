@@ -1,5 +1,5 @@
 ---lookupversion:11
----minorversion:1
+---minorversion:2
 
 ---context:way
 
@@ -251,6 +251,8 @@ motor_vehicle;0000025092 destination customers delivery
 motor_vehicle;0000010895 permissive
 motor_vehicle;0000000175 emergency Emergency
 motor_vehicle;0000000001 permit
+motor_vehicle;0000000001 psv
+motor_vehicle;0000000001 hov
 
 motorcar;0000135124 no
 motorcar;0000045407 yes
@@ -261,6 +263,8 @@ motorcar;0000005757 designated official
 motorcar;0000004116 permissive
 motorcar;0000000979 restricted
 motorcar;0000000001 permit
+motorcar;0000000001 psv
+motorcar;0000000001 hov
 
 motorcycle;0000092079 no
 motorcycle;0000027978 yes
@@ -298,6 +302,7 @@ vehicle;0000000100 psv
 vehicle;0000000001 permit
 vehicle;0000000001 military
 vehicle;0000000001 emergency
+vehicle;0000000001 hov
 
 horse;0000227398 no
 horse;0000144432 yes permissive
@@ -475,15 +480,15 @@ incline;0000000779 steep
 incline;0000000861 3% 0 1 2 3 0% 1% 2% 3%
 incline;0000000724 5% 4 5 4%
 incline;0000000530 8% 6 7 8 6% 7%
-incline;0000003109 10% 9 10 9% 10 
+incline;0000003109 10% 9 10 9% 10°
 incline;0000001297 15% 11 12 13 14 15 11% 12% 13% 14%
-incline;0000000997 20% 16 17 18 19 20 16% 17% 18% 19% 10 
+incline;0000000997 20% 16 17 18 19 20 16% 17% 18% 19% 10°
 incline;0000000409 25% 21 22 23 24 25 21% 22% 23% 24%
 incline;0000000263 30% 30 40 50 40% 50% 35%
 incline;0000000861 -3% -1 -2 -3 -1% -2% -3%
 incline;0000000724 -5% -4 -5 -4%
 incline;0000000530 -8% -6 -7 -8 -6% -7%
-incline;0000001515 -10% -9 -10 -9% -10 
+incline;0000001515 -10% -9 -10 -9% -10°
 incline;0000001297 -15% -11 -12 -13 -14 -15 -11% -12% -13% -14%
 incline;0000000997 -20% -16 -17 -18 -19 -20 -16% -17% -18% -19%
 incline;0000000409 -25% -21 -22 -23 -24 -25 -21% -22% -23% -24%
@@ -651,6 +656,7 @@ concrete;0000000013 lanes
 bus;0001178365 yes
 bus;0000006419 designated
 bus;0000005602 no
+bus;0000005602 urban
 
 psv;0000072077 yes
 psv;0000007456 no
@@ -815,6 +821,7 @@ construction;0000568118 living_street
 construction;0000515044 motorway motorway_link
 construction;0000442502 steps
 construction;0000360177 road highway
+construction;0000000049 bridleway
 
 
 ---context:node
