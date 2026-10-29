@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RecoverFromDeltaTest {
-  private static class MyProgressListener implements ProgressListener {
+  private static final class MyProgressListener implements ProgressListener {
 
     @Override
     public void updateProgress(String task, int progress) {
@@ -37,14 +37,11 @@ public class RecoverFromDeltaTest {
     File workingDir = file.getParentFile();
 
     // resources for test update from generation 0 to generation 2 using diff strategy
-    originalTilesDir = new File("/home/radim/Asamm-workspaces/brouterClone/brouter/misc/generator/3-8");
-    // originalTilesDir = new File(workingDir, "/../../../misc/generator/3-8");
-    diffsDir = new File("/home/radim/Asamm-workspaces/brouterClone/brouter/misc/generator/26-10/diff");
-    // diffsDir = new File(workingDir, "/../../../misc/generator/26-10/diff");
-    freshGeneratedTilesDir = new File("/home/radim/Asamm-workspaces/brouterClone/brouter/misc/generator/26-10");
-    // freshGeneratedTilesDir = new File(workingDir, "/../../../misc/generator/26-10");
-    updatedTilesDir = new File("/home/radim/Asamm-workspaces/brouterClone/brouter/misc/generator/tmp-gen");
-    // updatedTilesDir = new File(workingDir, "/../../../misc/generator/tmp-gen");
+    // workingDir is <module>/build/resources/test, the data is expected in <repo root>/misc/generator
+    originalTilesDir = new File(workingDir, "../../../../misc/generator/3-8");
+    diffsDir = new File(workingDir, "../../../../misc/generator/26-10/diff");
+    freshGeneratedTilesDir = new File(workingDir, "../../../../misc/generator/26-10");
+    updatedTilesDir = new File(workingDir, "../../../../misc/generator/tmp-gen");
   }
 
   @Ignore
@@ -56,7 +53,7 @@ public class RecoverFromDeltaTest {
     long start = System.currentTimeMillis();
     ProgressListener listener = new MyProgressListener();
     File[] originalTiles = originalTilesDir.listFiles();
-    List<String> errors = new ArrayList();
+    List<String> errors = new ArrayList<>();
 
     assert originalTiles != null;
     // param
@@ -125,7 +122,7 @@ public class RecoverFromDeltaTest {
     initResources();
 
     ProgressListener listener = new MyProgressListener();
-    List<String> errors = new ArrayList();
+    List<String> errors = new ArrayList<>();
 
     File[] originalTiles = originalTilesDir.listFiles();
 
