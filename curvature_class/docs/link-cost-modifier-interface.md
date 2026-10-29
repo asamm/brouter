@@ -1,166 +1,215 @@
-# Interface: LinkCostModifier (hook in BRouter for a PR)
+# LinkCostModifier: hook in BRouter
 
-Proposal, nothing is implemented. The runtime curvature has two parts with different
-owners:
+Implemented on branch `curvaturepr` (based on `master`, i.e. upstream `master`), five
+commits, PR to `asamm` first, then to upstream. Description of the PR:
+`pr-linkcostmodifier-asamm.md`.
 
-| part | what | where | review |
+The runtime curvature has two parts with different owners:
+
+| part | what | where | state |
 |---|---|---|---|
-| **interface** (this document) | a small, generic hook in the engine: a link is reported section by section, the hook returns a factor for its cost | BRouter (`brouter-core`) | upstream PR |
-| **implementation** | curvature `c` (window, M3 bands, serpentine rule, cap 0.9), buffers, codes `-11`, `-12` | our code, `LinkCurvature` | ours |
+| **hook** (this document) | a small, generic hook in the engine: a link is handed over with its whole geometry, the hook returns a factor for its section costs | `brouter-core`, branch `curvaturepr` | implemented, with two constant implementations |
+| **curvature** | `c` from the window, M3 bands, serpentine rule, cap 0.9; factor `1 - c` | an implementation of the hook behind code `-10` | not written; algorithm in `runtime-curvature-window.md`, Kotlin port `jvm/src/main/kotlin/btools/router/LinkCurvature.kt` |
 
-The interface knows nothing about curvature. Any algorithm that wants to change the cost
-of a link from its shape can use it, which is the argument for the PR. The algorithm of
-the implementation: `runtime-curvature-window.md`; the background of the negative
-`turncost` code: `runtime-curvature-turncost.md`.
+The hook knows nothing about curvature. Any algorithm that wants to change the cost of a
+link from its shape can use it, which is the argument for the upstream PR. Background of
+the negative `turncost` code: `runtime-curvature-turncost.md`.
 
-Line numbers refer to `brouter-core/src/main/java/btools/router/*.java` in this repository.
+Line numbers refer to `brouter-core/src/main/java/btools/router/*.java` on `curvaturepr`.
 
-## The interface
+## Behaviour
+
+| `turncost` of the way | turn angle penalty | LinkCostModifier |
+|---|---|---|
+| `>= 0` | as before | none |
+| `-10` | off | factor 1, the cost does not change (the curvature goes here later) |
+| `-11` | off | factor 0.5, for tests |
+| other negative | off | none |
+
+Profiles with a non-negative `turncost` get exactly the same costs as before (the section
+cost is multiplied by `1.`). No profile in `misc/profiles2` on `master` uses a negative
+`turncost`.
+
+## Commits
+
+| commit | content |
+|---|---|
+| `a2f78a6e` Negative turncost switches off the turn angle penalty | `StdPath.java:89-91`, `docs/developers/profile_developers_guide.md` |
+| `f5b2a027` Add LinkCostModifier interface | new `LinkCostModifier.java` |
+| `22e0ceb7` Select a LinkCostModifier by the turncost code | new `ConstantLinkCostModifier.java`, `RoutingContext.java:231-247` |
+| `084a5298` Apply the LinkCostModifier to the section costs of a link | `OsmPath.java:199-202`, `:310-311` |
+| `d582d3c2` Test the LinkCostModifier selection by turncost | new `src/test/java/btools/router/LinkCostModifierTest.java` |
+
+## The code
+
+### Turn angle penalty (`StdPath.java:88-91`)
 
 ```java
-package btools.router;
+// penalty for turning angle
+// a negative turncost switches it off, the value is reserved for a linkCostModifier
+int turncost = turncostbase < 0.f ? 0
+  : (int) ((1. - cosangle) * turncostbase + 0.2); // e.g. turncost=90 -> 90 degree = 90m penalty
+```
 
+The bike crossing penalties (`additional_turn_cost`, added to `turncost` right after) stay:
+they are junction logic, not road shape.
+
+### The interface (`LinkCostModifier.java`)
+
+```java
 /**
  * Changes the cost of a link from its geometry.
  *
- * Active for a way whose turncost is negative; the turncost penalty per vertex is not
- * computed then. One instance per routing request, used by one thread only.
+ * Selected by a negative turncost of the way, the turn angle penalty is switched
+ * off then (see StdPath). Called once per link, before its sections are processed.
+ * An instance can be shared by several routing threads, so it must be thread safe.
  */
 public interface LinkCostModifier {
 
   /**
-   * Start of a link, or of the rest of a link after a waypoint match in its middle
-   * (then everything reported so far for this link is discarded).
-   *
-   * @param code         turncost of the way, a negative number, selects the algorithm
-   * @param isRouteStart the link starts the route; the angle of the first section is not
-   *                     a real turn (it comes from a faked origin)
+   * @param lon0          longitude of the point before the link (the last but one point
+   *                      of the previous link), -1 at the start of the route
+   * @param lat0          latitude of that point, -1 at the start of the route
+   * @param sourceNode    start of the link
+   * @param transferNodes intermediate points in the direction of travel, null if none
+   * @param targetNode    end of the link
+   * @return factor for the section costs of the link, >= 0; 1 = no change
    */
-  void startLink(int code, boolean isRouteStart);
-
-  /**
-   * One section of the link, in the direction of travel.
-   *
-   * @param dist  length in m, as rc.calcDistance (>= 1)
-   * @param angle signed turn angle at the start point of the section in degrees, as
-   *              CheapAngleMeter.calcAngle; for the first section it is the turn relative
-   *              to the last point of the previous link
-   */
-  void addSection(double dist, double angle);
-
-  /**
-   * End of the link: the factor for the sum of the section costs of the link.
-   * 1 = no change; the curvature implementation returns 1 - c.
-   */
-  double linkCostFactor();
+  double linkCostFactor(int lon0, int lat0, OsmNode sourceNode, OsmTransferNode transferNodes, OsmNode targetNode);
 }
 ```
 
-## Calls for one link
-
-```
-addAddionalPenalty(link)
-  evaluate way tags (:142)            turncost < 0 and a modifier registered?
-  startLink(code, isRouteStart)       isRouteStart = origin.originLon == -1 (:128)
-  loop over sections (:199)
-    [waypoint match in the link]      startLink(code, true), section cost sum = 0
-    dist (:238), angle (:289)
-    addSection(dist, angle)
-    sectionCost (:305), turncost = 0 in StdPath
-    cost += sectionCost; sum += sectionCost (:315)
-    [stop at the end waypoint]        factor applied, return (:345)
-  end of the loop (:368)              factor applied
-```
-
-The factor is applied once per link:
+### Selection (`RoutingContext.java:231-247`)
 
 ```java
-cost += (int) ((linkCostModifier.linkCostFactor() - 1.) * linkSectionCost);
+// linkCostModifiers selected by a negative turncost of the way (see StdPath)
+private static final LinkCostModifier LINK_COST_NONE = new ConstantLinkCostModifier(1.);
+private static final LinkCostModifier LINK_COST_HALF = new ConstantLinkCostModifier(0.5); // for tests
+
+public static LinkCostModifier getLinkCostModifier(float turncost) {
+  switch ((int) turncost) {
+    case -10:
+      return LINK_COST_NONE;
+    case -11:
+      return LINK_COST_HALF;
+    default:
+      return null;
+  }
+}
 ```
 
-## Changes in BRouter
+`ConstantLinkCostModifier` returns the same factor for every link.
 
-| file / place | change | lines (approx.) |
-|---|---|---|
-| new `LinkCostModifier.java` | the interface above | ~15 |
-| registration (see decision 2) | `public LinkCostModifier linkCostModifier;` in `RoutingContext` | 1 |
-| `OsmPath.java:142` | `modifier = turncost < 0 ? rc.linkCostModifier : null`, `startLink(...)` | 3 |
-| `OsmPath.java:246-251` | `startLink(code, true)`, sum = 0 | 2 |
-| `OsmPath.java:289` | `addSection(dist, angle)` | 1 |
-| `OsmPath.java:315` | `linkSectionCost += (int) sectionCost` | 1 |
-| `OsmPath.java:345`, `:368` | apply the factor | 2 × 3 |
-| `StdPath.java:89` | `turncost = 0` when the modifier is active | 1 |
+### The hook (`OsmPath.java:196-202`, `:310-311`)
 
-About 30 lines, no change for a profile without a negative turncost or without a
-registered modifier (one comparison per link).
+```java
+OsmTransferNode transferNode = link.geometry == null ? null
+  : rc.geometryDecoder.decodeGeometry(link.geometry, sourceNode, targetNode, isReverse);
+
+// a negative turncost can select a linkCostModifier for the section costs of the link
+LinkCostModifier linkCostModifier = RoutingContext.getLinkCostModifier(rc.expctxWay.getTurncost());
+double linkCostFactor = linkCostModifier == null ? 1.
+  : linkCostModifier.linkCostFactor(lon0, lat0, sourceNode, transferNode, targetNode);
+
+for (int nsection = 0; ; nsection++) {
+  ...
+  double sectionCost = processWaySection(rc, dist, delta_h, elevation, angle, cosangle, isStartpoint, nsection, lastpriorityclassifier)
+    * linkCostFactor;
+```
 
 ## Contract
 
-- **Selection:** `turncost < 0` of the way **and** a registered modifier. The code is the
-  turncost itself, so a profile can choose it per way by tags
-  (`if ismainroad then 90 else -11`); the expression cache is not a problem, the code
-  depends on tags only (`runtime-curvature-turncost.md`).
-- **What the factor applies to:** the sum of the section costs of the link (distance part
-  `dist * costfactor` with the slope-dependent costfactor, plus the elevation cost). Not to
-  initialcost (`:155-171`), nogo cost (`:371-376`) or the target node cost (`:379`):
-  access penalties and nogo weights are never discounted.
-- **Sections are not changed.** The factor is applied after the loop, so the check
-  `sectionCost < 0` (`:306`) and the per-section messages work as today.
-- **Waypoint in the middle of a link:** at the start waypoint the path begins in the link
-  (`:246-251`), `startLink(code, true)` is called again; at the end waypoint the loop stops
-  early (`:345`) and the factor is computed from the sections reported so far.
-- **Traffic backbone** (`:311-313`): the section costs are 0, so the factor has no effect.
-- **Threads:** one instance per routing request (with registration in `RoutingContext`,
-  which is per request), so the implementation needs no synchronisation and can keep its
-  buffers as plain fields.
-- **Only the cost.** Time, energy and kinematics (`:318`) are not affected.
-- **Detail mode / messages:** nothing in this version. The implementation can be extended
-  later (e.g. `c` as a column next to `TurnCost`), that is a separate change.
+- **Selection:** the `turncost` of the way is the code, so a profile can choose it per way
+  by tags (`if ismainroad then 90 else -10`). The expression cache is not a problem, the
+  code depends on tags only (`runtime-curvature-turncost.md`). A non-integer value is cut
+  to an int (`-10.5` selects `-10`).
+- **Input:** the point before the link (`origin.originLon/Lat`, `-1` at the start of the
+  route) and the whole geometry in the direction of travel: `sourceNode`, the decoded
+  list of `OsmTransferNode`, `targetNode`. Nothing is copied. The list lives in the cache
+  of `GeometryDecoder` and is valid only during the call.
+- **What the factor applies to:** every section cost from `processWaySection`, i.e.
+  `dist * costfactor` (the slope-dependent costfactor), the elevation cost and the bike
+  crossing penalties. Not initialcost (`OsmPath.java:155-171`), nogo cost, the target node
+  cost or the reference track penalty: access penalties and nogo weights are never
+  discounted.
+- **Range:** the engine does not check the factor. It is applied before the check
+  `sectionCost < 0` (`OsmPath.java:312`), so a negative factor drops the link instead of
+  producing a negative cost.
+- **Waypoint in the middle of a link:** the factor is computed from the whole link, also
+  when the route uses only a part of it.
+- **Traffic backbone:** the section costs are set to 0 after the factor, no effect.
+- **Threads:** the instances are static and shared by all routing threads; an
+  implementation must be thread safe (stateless, local arrays, or a `ThreadLocal` inside).
+  `RoutingContext` gets no new fields.
+- **Only the cost.** Time, energy and kinematics are not affected.
+- **Messages (detail mode):** `costfactor` and `linkturncost` of `MessageData` are
+  without the factor; the cost of the track is with it.
+- **Models:** the hook is in `OsmPath`, so it works for the std and the kinematic model.
+  The turn angle penalty is switched off only in `StdPath`; `KinematicPath` does not use
+  `turncost`.
+- **Start direction:** a negative `turncost` also removes the start direction bias (the
+  angle of the first section after a faked origin, `OsmPath.java:282-293`, costs nothing).
+
+## Test
+
+`LinkCostModifierTest` routes the track of `RoutingEngineTest.routeCrossingSegmentBorder`
+(689 m, segments from the map-creator test) with copies of `misc/profiles2/shortest.brf`
+(cost 1 per metre) that differ only in `turncost`. The copy and `lookups.dat` are written
+to a `TemporaryFolder`, with `turncost` in the file name, because `ProfileCache` knows a
+profile by name and timestamp. Overriding `turncost` with `keyValues` does not work: an
+injected value belongs to the global context and is read only in the way context
+("cannot assign to readonly variable turncost").
+
+| turncost | cost | checks |
+|---|---|---|
+| 0 | 689 | reference |
+| -12 | 689 | a negative code without a modifier only switches the penalty off |
+| -10 | 689 | factor 1 does not change the cost |
+| -11 | 331 | factor 0.5; 689 / 2 minus the int rounding of 43 sections |
+| 90 | 950 | a positive turncost still adds the penalty |
+
+All tests also check that the track (its distance) stays the same. Not tested directly:
+that initialcost is not discounted (`shortest.brf` has initialcost only on ferries).
 
 ## Our implementation behind it
 
-```kotlin
-class LinkCurvature : LinkCostModifier {
-    override fun startLink(code: Int, isRouteStart: Boolean)  // clear buffers, choose params by code
-    override fun addSection(dist: Double, angle: Double)      // append to growable buffers
-    override fun linkCostFactor(): Double                     // 1 - c, c from bands() + M3 + serpentine rule, <= 0.9
-}
+The curvature becomes one more class and one more `case`:
+
+```java
+case -10:
+  return LINK_COST_CURVATURE;    // linkCostFactor() = 1 - c
 ```
 
-The port in `jvm/src/main/kotlin/btools/router/LinkCurvature.kt` has the algorithm; the
-interface methods and reusable buffers replace its `compute(dist, angle, isRouteStart)`.
-Unknown codes (other than `-11`, `-12`) return 1.
+It computes `dist[]` and `angle[]` from the geometry itself and then runs `bands()` + M3
++ serpentine rule of `LinkCurvature.kt`. Details: "Integration into the engine" in
+`runtime-curvature-window.md`.
 
-## Alternatives not chosen
+## Decisions (2026-10-29) and what was rejected
 
-- **One call before the loop with the geometry** (`sourceNode`, the transfer node list,
-  `targetNode`): even less code in the engine, but the implementation would have to compute
-  distances and angles again (it must not use `rc.calcDistance`, which has side effects,
-  `RoutingContext.java:423-509`), and at a waypoint in the middle of a link it would measure
-  the whole link.
-- **The engine collects arrays and calls `compute(dist[], angle[])` at the end:** buffers
-  in the engine code, which is what we want to avoid.
-- **The hook changes every section cost:** the factor is not known before the end of the
-  link (the window looks ahead), so it would need the pre-pass above.
+The first proposal (2026-10-22) was a streamed interface with a correction at the end of
+the link. Changed while implementing:
 
-## Decisions open
+| question | first proposal | implemented | why |
+|---|---|---|---|
+| shape | streamed: `startLink` / `addSection(dist, angle)` / `linkCostFactor()` | one call with the whole geometry, before the section loop | the smallest change in the engine (one call, one multiplication); no special case at the early `return` at the end waypoint or at the reset at the start waypoint |
+| where the factor applies | once at the end of the link, on the sum of the section costs | on every section cost | the factor is known before the loop; the same result up to int rounding (now per section, at most 1 per section) |
+| registration | a field `linkCostModifier` in `RoutingContext`, set by the app | hardwired: `switch` over the code in `RoutingContext`, static instances | no new state in `RoutingContext`, no setup in the app; keep it simple |
+| range of the factor | check `f >= 0` in the engine | no check | a negative factor drops the link through the existing `sectionCost < 0` check |
+| negative turncost without a modifier | per-vertex penalty as before | penalty off | the negative per-vertex penalty was never usable (density dependent, drops links) |
+| models | no restriction | no restriction | unchanged |
+| new built-in variable instead of the `turncost` code | - | not in this PR | keep it simple; expected aesthetic objection upstream |
 
-1. **Shape of the interface:** streamed (`startLink` / `addSection` / `linkCostFactor`,
-   recommended) or one call with the geometry.
-2. **Registration:**
-   - (a) **one field in `RoutingContext`**, `public LinkCostModifier linkCostModifier`
-     (recommended): a reference, no buffers; the context exists per request, so one
-     instance per thread without `ThreadLocal`. The app sets it before routing.
-   - (b) a static factory in `OsmPath` (`OsmPath.setLinkCostModifierFactory(...)`) with a
-     `ThreadLocal` inside: `RoutingContext` untouched, but global state, which upstream
-     reviewers usually do not like.
-3. **Range of the factor checked by the engine:** only `f >= 0` (recommended: generic, a
-   modifier may also penalise with `f > 1`; the safety of our values, `c <= 0.9`, is the
-   implementation's job) or `0 < f <= 1` (discount only).
-4. **Negative turncost without a registered modifier:** today's behaviour, the per-vertex
-   penalty with a negative value (recommended: nothing that exists changes) or turncost 0.
-5. **Models:** the hook is in `OsmPath`, so it works for the std and the kinematic model.
-   `KinematicPath` does not use turncost at all (it has its own turn penalty,
-   `KinematicPath.java:44`), so there is nothing to switch off there; the kinematic model
-   is for cars and nobody would set a negative turncost in it. Recommended: no restriction
-   to the std model in the engine.
+The price of the one call: the implementation computes distances and angles once more
+(it must not use `rc.calcDistance`, which has side effects, `RoutingContext.java:474-574`),
+and at a waypoint in the middle of a link it measures the whole link.
+
+## Open for the upstream PR
+
+- Aesthetic objections to expect: `turncost` overloaded with codes, a test implementation
+  (`-11`) in production code, a hook whose only production implementation (`-10`) does
+  nothing yet. The description should say what it is for (curvature for road
+  motorcyclists).
+- Upstream merges PRs as squash commits (since mid-2026): the five commits become one.
+  If `curvaturepr` is merged into `asamm` first, `asamm` gets the same change again as
+  another commit at the next sync with `master`; identical changes merge cleanly, changes
+  made in the upstream review may conflict in `OsmPath` / `RoutingContext`.

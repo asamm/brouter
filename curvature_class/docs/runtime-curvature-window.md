@@ -44,16 +44,17 @@ times cheaper.
   points BRouter already has, in O(n), with the cheap arithmetic BRouter uses (no
   trigonometric function per point).
 
-## Inputs (all already computed in `OsmPath.addAddionalPenalty`)
+## Inputs (the same values `OsmPath.addAddionalPenalty` computes in its section loop)
 
 Per section i of the link (point i -> i+1):
 
-- `dist[i]`: section length in metres (`rc.calcDistance`),
+- `dist[i]`: section length in metres (the arithmetic of `rc.calcDistance`),
 - `angle[i]`: signed turn angle at point i in degrees (`CheapAngleMeter.calcAngle`,
   polynomial, no `asin`). `angle[0]` is the turn at the source node relative to the last
   point of the previous link (`origin`).
 
-Nothing else is needed: no coordinates, no tags.
+Nothing else is needed: no tags. The implementation behind the hook gets the points of
+the link and computes both itself ("Integration into the engine").
 
 ## Algorithm
 
@@ -156,149 +157,109 @@ serpentine sections (Stelvio and the Dolomite passes must come out very strongly
 binary jump is intended. At runtime the rule costs nothing extra: the band lengths are
 already there, it is two comparisons per link.
 
-## Integration into OsmPath / StdPath
+## Integration into the engine
 
-The integration is split into a generic hook in the engine, which goes through an
-upstream PR, and our implementation behind it: `link-cost-modifier-interface.md`. This
-section is the background of that design (why at the end of the link, buffers, properties
-of the cost).
+The engine part is the generic hook `LinkCostModifier`, implemented on branch
+`curvaturepr`: `link-cost-modifier-interface.md`. The curvature becomes an
+implementation of it behind code `-10`; it is not written yet. Line numbers refer to
+`brouter-core/src/main/java/btools/router/*.java` on `curvaturepr`.
 
-How `bands()` (Kotlin port: `jvm/src/main/kotlin/btools/router/LinkCurvature.kt`) hooks
-into the engine. Design, nothing is implemented. Line numbers refer to
-`brouter-core/src/main/java/btools/router/*.java` in this repository; the development
-copy used for the export differs only by the temporary `LinkDump` hooks.
+### How c plugs in
 
-### The problem: c is known only at the end of the link
+```java
+final class CurvatureLinkCostModifier implements LinkCostModifier {
+  @Override
+  public double linkCostFactor(int lon0, int lat0, OsmNode sourceNode, OsmTransferNode transferNodes, OsmNode targetNode) {
+    // dist[], angle[] from the points, then bands() + M3 + serpentine rule, c <= 0.9
+    return 1. - c;
+  }
+}
+```
 
-`bands()` needs `dist[]` and `angle[]` of the **whole** link, but `OsmPath` computes them
-one section at a time inside the section loop (`OsmPath.java:199-368`): `dist` at `:238`,
-`angle` at `:289`, and the section cost right after that at `:305`. Two ways out:
+and in `RoutingContext.getLinkCostModifier` the code `-10` returns it instead of the
+constant factor 1.
 
-- **A. pre-pass:** walk the geometry once before the loop, compute `dist` / `angle`, then
-  `c`, and use `c` in every section,
-- **B. correction at the end of the link:** collect `dist` / `angle` in the existing loop,
-  compute `c` after it and lower the cost of the link once.
+1. **Selection:** the profile sets `turncost = -10` (fixed or by tags). `StdPath` then
+   skips the turn angle penalty (`StdPath.java:88-91`).
+2. **Call:** once per link, before the section loop (`OsmPath.java:199-202`), with the
+   point before the link and the whole geometry in the direction of travel.
+3. **Inputs** (see "Inputs" above): the implementation computes `dist[]` and `angle[]`
+   from the points `(lon0, lat0)`, `sourceNode`, the transfer nodes, `targetNode`. It must
+   not use `rc.calcDistance` (side effects for waypoint matching and nogo areas,
+   `RoutingContext.java:474-574`) nor `rc.anglemeter` (state of the routing context);
+   the same arithmetic as `calcDistance` (`CheapRuler.getLonLatToMeterScales`, `sqrt`) and
+   its own `CheapAngleMeter` give the same values as the loop. `lon0 == -1` means the
+   start of the route (`isRouteStart`, `angle[0]` is ignored).
+4. **Result:** `1 - c` multiplies every section cost of the link (`OsmPath.java:310-311`),
+   i.e. the distance part with the slope-dependent costfactor, the elevation cost and
+   the bike crossing penalties. Not initialcost, nogo, the target node cost: the same base
+   as decided on 2026-10-22 (sum of the section costs), only applied per section.
 
-### Chosen: B, correction at the end of the link
+The Kotlin port (`LinkCurvature.compute(dist, angle, isRouteStart)`) stays the core; a
+front end builds the arrays from the geometry.
 
-Reasons against the pre-pass:
+### Why one call before the loop after all
 
-- `rc.calcDistance` is not a pure function (`RoutingContext.java:415-515`): it resets and
-  sets `shortestmatch`, `wayfraction`, `ilonshortest/ilatshortest` and `nogoCost`
-  (waypoint matching and nogo areas). A pre-pass would have to use its own distance, and
-  that could differ from the one the loop uses.
-- It computes every `dist` and `angle` twice (2 `sqrt` and the `CheapAngleMeter`
-  polynomial per section).
-- With waypoint matching in the middle of the link (`shortestmatch`, `:241-270`) it would
-  measure a part of the link the route does not use.
+On 2026-10-22 a correction at the end of the link was chosen, to reuse `dist` and `angle`
+of the section loop (and a pre-pass was rejected). On 2026-10-29 the interface was
+changed to one call before the loop:
 
-B uses exactly the values the loop already has, and nothing in the loop changes except
-that two numbers are stored per section. The only thing A could do better is a per-section
-discount visible in the messages of the final track (see below), which is only cosmetic.
+- the change in the engine is the smallest possible (one call, one multiplication),
+  without special cases at the early `return` at the end waypoint or at the reset at the
+  start waypoint,
+- no buffers in the engine, the factor is known for every section.
 
-### Step by step
+The price, accepted:
 
-1. **Selection, once per link** (after `rc.expctxWay.evaluate`, `OsmPath.java:142`):
-   `boolean curvatureMode = rc.expctxWay.getTurncost() <= -11;`. Everything below runs only
-   when it is true; other profiles pay one comparison per link.
-2. **Collect the inputs** (in the loop, after `angle` at `OsmPath.java:289`): append
-   `dist` and `angle` to buffers (where they live: "Buffers" below). Also remember
-   `isRouteStart = isStartpoint` of section 0 (`:220`; a faked start direction at
-   `:278-288` does not matter, angle[0] is ignored at the route start).
-3. **Reset on a waypoint match** (`:246-251`, the path starts in the middle of the link):
-   clear the buffers and set `isRouteStart = true`; the cost is reset there too.
-4. **No turncost** (`StdPath.java:89`): `turncost = 0` when `turncostbase <= -11`. That also
-   removes the reason why links with a negative turncost were dropped
-   (`sectionCost < 0`, `OsmPath.java:306`).
-5. **Sum of the section costs** (`OsmPath.java:315`): add `(int) sectionCost` of every
-   section to `linkSectionCost`, next to `cost += (int) sectionCost`. With turncost 0 the
-   section cost is `dist * costfactor + elevation cost + 0.5` (`StdPath.java:95-176`;
-   `costfactor` is the slope-dependent one, `:170`). The sum is reset in section 0 and in
-   step 3. Sections of a traffic backbone (`OsmPath.java:311-313`) are 0 already.
-6. **Correction** after the loop (`OsmPath.java:368`, before the nogo check) and also
-   before the early `return` at a waypoint (`:345`):
-
-   ```java
-   double c = lc.compute(isRouteStart);                   // bands() + M3 + serpentine rule, <= 0.9
-   cost -= (int) (c * linkSectionCost);                   // = link cost * (1 - c)
-   ```
-
-   Everything is in `OsmPath`, `StdPath` only gets `turncost = 0` (step 4).
-
-   What the factor applies to (decided 2026-10-22: `(1 - c)` directly, no strength
-   parameter, on the sum of the section costs):
-
-   | base | what it discounts | note |
-   |---|---|---|
-   | `dist * costfactor` only | distance part | needs the sum in `StdPath` (`:176`) and an override hook |
-   | **sum of the section costs** (chosen) | distance + elevation cost | all in `OsmPath`; a curvy climb is discounted as a whole |
-   | whole cost of the link | also initialcost (`:155-171`), nogo, target node (`:379`) | not recommended: would discount access penalties and nogo weights |
-7. **Messages** (optional, detailMode only): `c` and the serpentine flag in `MessageData`,
-   set on the message of the last section of the link, as a new column next to `TurnCost`.
+- `dist` and `angle` are computed twice (about 2 `sqrt` and the `CheapAngleMeter`
+  polynomial per section more, the same O(n));
+- at a waypoint in the middle of a link the whole link is measured, not the used part.
 
 ### Buffers
 
-The buffers (`dist[]`, `angle[]` of the link and the knots of `Θ(s)`) live only in
-`OsmPath`; `RoutingContext` is not changed (decided 2026-10-22). They are needed only
-during one `addAddionalPenalty` call (it is not reentrant), so they must not be instance
-fields: an `OsmPath` object exists for every link expansion and many of them wait in the
-open set, every extra field costs memory millions of times.
+The instances behind the codes are static and shared by all routing threads, so the
+implementation must be thread safe; `RoutingContext` gets no new fields and `OsmPath` no
+buffers (decided 2026-10-22, still holds).
 
-| where in `OsmPath` | thread safe | allocation | verdict |
-|---|---|---|---|
-| instance fields | yes | per path object, kept in the open set | no |
-| `static` arrays | **no**: the server runs a thread per request, the app can route in parallel | none | no |
-| **`static ThreadLocal<LinkCurvature>`**, the object owns arrays that grow when needed | yes | once per thread | **chosen** |
-| local arrays in `addAddionalPenalty` | yes | 4 small arrays per link expansion | fallback, simplest code |
+| where | allocation | verdict |
+|---|---|---|
+| local arrays in `linkCostFactor` | a few small arrays per link expansion | simplest code, start with it |
+| `ThreadLocal` inside the implementation, the object owns growable arrays | once per thread | if the allocation shows up in profiling |
 
-```java
-// OsmPath: one curvature calculator per routing thread, buffers reused between links
-private static final ThreadLocal<LinkCurvature> CURVATURE = ThreadLocal.withInitial(LinkCurvature::new);
-...
-LinkCurvature lc = curvatureMode ? CURVATURE.get() : null;   // once per link, then lc.reset()
-```
-
-With the hook of `link-cost-modifier-interface.md` the buffers move out of `OsmPath`
-completely: they are fields of the implementation. With registration (a), one instance
-per `RoutingContext`, no `ThreadLocal` is needed; the `ThreadLocal` above belongs to
-registration (b).
-
-The `ThreadLocal` lookup is once per link, not per section. `OsmPath` already has a
-static field (`seg`, `OsmPath.java:101`), so a static in it is nothing new. The
-`LinkCurvature` port allocates its arrays in `bands()` for clarity; for the engine they
-become fields of the object (`add(dist, angle)`, `reset()`, `compute(isRouteStart)`).
+The transfer node list belongs to the cache of `GeometryDecoder` and must not be kept
+after the call.
 
 ### Properties
 
-- **The cost never goes negative.** The correction is at most `c * linkSectionCost` with
-  `c <= 0.9`, so it never takes back more than the section costs of the same link. The
-  section costs are not changed, so the `sectionCost < 0` check cannot drop the link.
+- **The cost never goes negative.** The factor `1 - c` is at least 0.1 (cap `c <= 0.9`),
+  so every section cost stays positive; a negative factor would drop the link through
+  the `sectionCost < 0` check (`OsmPath.java:312`).
 - **c is capped at 0.9** (decided 2026-10-22, `Params.maxC` in `LinkCurvature.kt`), so a
   link costs at least a tenth. Without the cap, `c = 1` (a link entirely in the hairpin
   band) would make the link free: legal for the search (zero, not negative), but
   `cost == 0` also marks the start of a path (`isTrafficBackbone`, `OsmPath.java:151`)
   and a loop of free links would have no length penalty at all.
 - **The strength is in the algorithm, not in the profile.** Changing it means changing
-  the band weights or `serpC`, i.e. a new app version. Different strengths can be different
-  codes (`-11` road, `-12` adventure, `runtime-curvature-turncost.md`).
-- **The A\* search sees the corrected cost.** The correction is applied inside
+  the band weights or `serpC`, i.e. a new app version. Different strengths can be
+  different codes (`-10` now, `-11` is taken by the test implementation).
+- **The A\* search sees the discounted cost.** The factor is applied inside
   `addAddionalPenalty`, before the path is put into the queue.
-- **Only the cost changes.** Time, energy and kinematics (`computeKinematic`, `:318`) are
-  not touched.
-- **Rounding:** the correction is one `int` per link, the same precision as the section
-  costs.
-- **Cost of the work:** no extra `dist` / `angle`; two buffer writes per section plus
-  `bands()` once per link, O(n + L / (W/2)).
-- **Per-section messages do not show the discount**: `message.costfactor` stays the
-  undiscounted value. That is the price for not changing the sections (variant A would
-  show it).
+- **Only the cost changes.** Time, energy and kinematics are not touched.
+- **Rounding:** each section cost is cut to an `int` after the factor, so the loss is at
+  most 1 per section (13 on 43 sections in `LinkCostModifierTest`).
+- **Cost of the work:** one more pass over the geometry per link expansion with the
+  distance and the angle per section, plus `bands()`, O(n + L / (W/2)); the geometric part
+  of the link expansion gets roughly twice as expensive.
+- **Messages (detail mode):** `costfactor` and `linkturncost` per section are without the
+  factor, the cost of the track is with it. `c` itself is not in the messages; adding it
+  would be a separate change.
 - **Direction:** `angle[0]` and the one-sided smearing of vertex 0 depend on the direction
   of travel, so `c` of one link can differ a little between the two directions (and with
   `rc.inverseDirection`). The difference is small and acceptable.
-- **Heuristic:** with the default `pass2coefficient = 0` (`RoutingContext.java:140`) the
+- **Heuristic:** with the default `pass2coefficient = 0` (`RoutingContext.java:158`) the
   second pass is exact. A profile with `pass2coefficient > 0` assumes a minimum cost per
-  metre; the discount lowers the real minimum to `(1 - c) * costfactor` (0.2 on serpentines,
-  0.1 at the cap), and that has to be taken into account when choosing it.
+  metre; the discount lowers the real minimum to `(1 - c) * costfactor` (0.2 on
+  serpentines, 0.1 at the cap), and that has to be taken into account when choosing it.
 
 ## Open questions
 
