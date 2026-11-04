@@ -85,8 +85,8 @@ final class LinkCurvature implements LinkCostModifier {
   // EXPORT (temporary, curvature verification): every evaluated link once, as
   // GeoJSONSeq in the format of LinkDump plus c, bands, serpentine.
   // Switch off by commenting out the first line and in the second.
-  private static final String EXPORT_FILE = System.getProperty("java.io.tmpdir") + "/link-curvature.geojsonl";
-  // private static final String EXPORT_FILE = null;
+  // private static final String EXPORT_FILE = System.getProperty("java.io.tmpdir") + "/link-curvature.geojsonl";
+  private static final String EXPORT_FILE = null;
   private static final String EXPORT_TRACK = "search-" + System.currentTimeMillis();
   private static Writer exportWriter;
   private static Set<String> exported;
