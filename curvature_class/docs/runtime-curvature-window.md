@@ -4,7 +4,9 @@ The algorithm that computes the curvature factor `c` of one link at routing time
 variant described in `runtime-curvature-turncost.md` (curvature selected by a negative
 `turncost` code, std model / `StdPath`; when it is active, the per-vertex turncost is not
 computed at all). Prototype in Python: `python/curvature_window.py`, chosen variant
-with the serpentine boost: `python/curvature_variants.py`.
+with the serpentine boost: `python/curvature_variants.py`. Implemented in Java on branch
+`curvaturepr`: `brouter-core/src/main/java/btools/router/LinkCurvature.java`, code `-12`
+(commit `3b54c7c3`).
 
 Target users: road motorcyclists (roadsters, canyon chasers). The road motorcycle profile
 will be built from scratch; the existing Enduro profiles (off-road) are not a reference.
@@ -160,14 +162,15 @@ already there, it is two comparisons per link.
 ## Integration into the engine
 
 The engine part is the generic hook `LinkCostModifier`, implemented on branch
-`curvaturepr`: `link-cost-modifier-interface.md`. The curvature becomes an
-implementation of it behind code `-10`; it is not written yet. Line numbers refer to
-`brouter-core/src/main/java/btools/router/*.java` on `curvaturepr`.
+`curvaturepr`: `link-cost-modifier-interface.md`. The curvature is the implementation
+`LinkCurvature` behind code `-12` (commit `3b54c7c3`); `-10` and `-11` stay the constant
+factors 1 and 0.5. Line numbers refer to `brouter-core/src/main/java/btools/router/*.java`
+on `curvaturepr`.
 
 ### How c plugs in
 
 ```java
-final class CurvatureLinkCostModifier implements LinkCostModifier {
+final class LinkCurvature implements LinkCostModifier {
   @Override
   public double linkCostFactor(int lon0, int lat0, OsmNode sourceNode, OsmTransferNode transferNodes, OsmNode targetNode) {
     // dist[], angle[] from the points, then bands() + M3 + serpentine rule, c <= 0.9
@@ -176,10 +179,10 @@ final class CurvatureLinkCostModifier implements LinkCostModifier {
 }
 ```
 
-and in `RoutingContext.getLinkCostModifier` the code `-10` returns it instead of the
-constant factor 1.
+and in `RoutingContext.getLinkCostModifier` (`RoutingContext.java:239-250`) the code `-12`
+returns the shared instance `LINK_COST_CURVATURE`.
 
-1. **Selection:** the profile sets `turncost = -10` (fixed or by tags). `StdPath` then
+1. **Selection:** the profile sets `turncost = -12` (fixed or by tags). `StdPath` then
    skips the turn angle penalty (`StdPath.java:88-91`).
 2. **Call:** once per link, before the section loop (`OsmPath.java:199-202`), with the
    point before the link and the whole geometry in the direction of travel.
@@ -195,8 +198,46 @@ constant factor 1.
    the bike crossing penalties. Not initialcost, nogo, the target node cost: the same base
    as decided on 2026-10-22 (sum of the section costs), only applied per section.
 
-The Kotlin port (`LinkCurvature.compute(dist, angle, isRouteStart)`) stays the core; a
-front end builds the arrays from the geometry.
+`LinkCurvature.java` is a Java port of the Kotlin study
+(`jvm/src/main/kotlin/btools/router/LinkCurvature.kt`, `compute(dist, angle,
+isRouteStart)`), written in the old-style Java of BRouter because it goes upstream:
+`linkCostFactor` builds the point arrays and `dist[]` / `angle[]` (own `calcDistance`, a
+copy of the arithmetic of `RoutingContext.calcDistance`, and its own `CheapAngleMeter`),
+then `bands()`, `weightedC()`, `isSerpentine()` and the cap. The parameters are
+constants of the class:
+
+| constant | value | Kotlin |
+|---|---|---|
+| `WINDOW` | 40 m | `Params.window` |
+| `JUNCTION_MAX_DEG` | 90° | `Params.junctionMaxDeg` |
+| `MIN_LENGTH` | 40 m | `Params.minLength` |
+| `SPREAD_CAP` | 10 m | `Params.spreadCap` |
+| `LIMITS` | 30, 60, 100, 175 m | `LIMITS` |
+| `WEIGHTS` | 2, 1.6, 1.3, 1, 0 (M3) | `WEIGHTS` |
+| `SERP_BANDS`, `SERP_SHARE`, `SERP_MIN_LENGTH`, `SERP_C` | R < 60 m, 20 %, 35 m, 0.8 | `Params.serpBands`, `serpShare`, `serpMinLength`, `serpC` |
+| `MAX_C` | 0.9 | `Params.maxC` |
+
+### Verification (2026-10-30)
+
+A temporary export in `LinkCurvature.java` (marked `EXPORT (temporary)`, switched off by
+`EXPORT_FILE = null`) wrote every link the search evaluated, once per link and point
+before it, as GeoJSONSeq with the property names of `LinkDump` plus `c`, `bands` and
+`serpentine`. Two routes with `turncost = -12`:
+
+| route | profile | links in the export | track |
+|---|---|---|---|
+| test track of `LinkCostModifierTest` | `shortest.brf`, `assign turncost -12` | 270 (129 with bands) | 689 m, cost 594 (689 at turncost 0) |
+| Stelvio pass, Trafoi - Bormio, 13 waypoints | `moped.brf`, turncost 90 replaced by -12 | 1890 (1067 with bands) | 48288 m, cost 45703 |
+
+- **Java vs. Python** (`runtime_bands` + `c_variant2` of `python/curvature_variants.py`,
+  cap 0.9) on the same `dist` / `angle`: max |Δc| 5e-5, max |Δband| 0.005 m (rounding of
+  the export), the serpentine flag the same on all links.
+- **`dist` / `angle` from the geometry vs. the section loop of `OsmPath`** (LinkDump of the
+  same Stelvio track, `real-links-export/real-links.geojsonl`): 278 of its 279 full links
+  are in the export, all with identical `dist` and `angle`.
+
+The exports with QGIS styles are kept outside git (`linkcurvature-export/`,
+`linkcurvature-raw-export/` on the working copy).
 
 ### Why one call before the loop after all
 
@@ -223,7 +264,7 @@ buffers (decided 2026-10-22, still holds).
 
 | where | allocation | verdict |
 |---|---|---|
-| local arrays in `linkCostFactor` | a few small arrays per link expansion | simplest code, start with it |
+| local arrays in `linkCostFactor` | a few small arrays per link expansion | implemented (`LinkCurvature`, stateless) |
 | `ThreadLocal` inside the implementation, the object owns growable arrays | once per thread | if the allocation shows up in profiling |
 
 The transfer node list belongs to the cache of `GeometryDecoder` and must not be kept
@@ -234,14 +275,14 @@ after the call.
 - **The cost never goes negative.** The factor `1 - c` is at least 0.1 (cap `c <= 0.9`),
   so every section cost stays positive; a negative factor would drop the link through
   the `sectionCost < 0` check (`OsmPath.java:312`).
-- **c is capped at 0.9** (decided 2026-10-22, `Params.maxC` in `LinkCurvature.kt`), so a
+- **c is capped at 0.9** (decided 2026-10-22, `MAX_C` in `LinkCurvature.java`), so a
   link costs at least a tenth. Without the cap, `c = 1` (a link entirely in the hairpin
   band) would make the link free: legal for the search (zero, not negative), but
   `cost == 0` also marks the start of a path (`isTrafficBackbone`, `OsmPath.java:151`)
   and a loop of free links would have no length penalty at all.
 - **The strength is in the algorithm, not in the profile.** Changing it means changing
-  the band weights or `serpC`, i.e. a new app version. Different strengths can be
-  different codes (`-10` now, `-11` is taken by the test implementation).
+  the band weights or `SERP_C`, i.e. a new app version. Different strengths can be
+  different codes (`-12` now; `-10` and `-11` are the constant modifiers).
 - **The A\* search sees the discounted cost.** The factor is applied inside
   `addAddionalPenalty`, before the path is put into the queue.
 - **Only the cost changes.** Time, energy and kinematics are not touched.

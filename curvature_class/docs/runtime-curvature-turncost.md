@@ -1,8 +1,8 @@
 # Variant: curvature computed at routing time, selected by a negative turncost
 
-Design note. The selection by a negative `turncost` and a generic hook in the engine are
-implemented on branch `curvaturepr` (`link-cost-modifier-interface.md`); the curvature
-algorithm itself is not. An alternative to the map-creation tag
+Design note. The selection by a negative `turncost`, a generic hook in the engine and the
+curvature algorithm behind it (`LinkCurvature`, code `-12`) are implemented on branch
+`curvaturepr` (`link-cost-modifier-interface.md`, `runtime-curvature-window.md`). An alternative to the map-creation tag
 `estimated_curvature_class` (see `metrics.md`): the curvature of a link is computed
 while routing, from the link geometry that BRouter already decodes, and a negative
 `turncost` value in the profile selects the algorithm.
@@ -28,8 +28,9 @@ geometry. As implemented on `curvaturepr`:
 | profile value     | meaning |
 |-------------------|---------|
 | `turncost >= 0`   | current per-vertex penalty, unchanged |
-| `turncost = -10`  | penalty off; factor 1 for now, the curvature of the link (road motorcycles) goes here |
+| `turncost = -10`  | penalty off; constant factor 1, the cost does not change |
 | `turncost = -11`  | penalty off; constant factor 0.5, for tests |
+| `turncost = -12`  | penalty off; the curvature of the link (road motorcycles), factor `1 - c` (`LinkCurvature`) |
 | other negative    | penalty off, no modifier; free for more algorithms (e.g. adventure bikes) |
 
 The code can be chosen per way in the profile, because `turncost` is an ordinary
@@ -38,7 +39,7 @@ expression evaluated per link:
 ```
 assign turncost = if junction=roundabout then 0
                   else if ismainroad then 90
-                  else -10
+                  else -12
 ```
 
 No profile in this repository (`misc/profiles2`, `locus-routing-profiles`) uses a negative
@@ -86,7 +87,7 @@ Implemented in essence as sketched here, as one call before the section loop
 (`link-cost-modifier-interface.md`; on 2026-10-22 a correction at the end of the link was
 preferred for a while, see "Integration into the engine" in `runtime-curvature-window.md`).
 Differences from the sketch: no field on the path (the factor is a local variable), the
-factor `1 - c` multiplies the whole section cost, no strength `w`, the code is `-10`.
+factor `1 - c` multiplies the whole section cost, no strength `w`, the code is `-12`.
 The original sketch:
 
 1. **`OsmPath.addAddionalPenalty`, after `OsmPath.java:196-197`:** if `turncost <= -11`,
@@ -120,12 +121,12 @@ constants, never on the geometry of a particular link.
 **Fine: selecting the algorithm in the profile.** A fixed value in one profile works:
 
 ```
-assign turncost = -10
+assign turncost = -12
 ```
 
-Every link gets -10 regardless of the cache. A tag-dependent value works as well
-(`if ismainroad then 90 else -10`), because tags are exactly what the cache is keyed by.
-Java reads `rc.expctxWay.getTurncost()` in `addAddionalPenalty`, sees -10 and runs the
+Every link gets -12 regardless of the cache. A tag-dependent value works as well
+(`if ismainroad then 90 else -12`), because tags are exactly what the cache is keyed by.
+Java reads `rc.expctxWay.getTurncost()` in `addAddionalPenalty`, sees -12 and runs the
 geometry algorithm; the value `c` is computed in Java afterwards, so the cache is not
 involved. The same holds for any other parameter the profile supplies as a constant or
 from tags (e.g. the strength `w`).
@@ -146,7 +147,7 @@ Summary:
 
 | what                                         | where                         | ok? |
 |----------------------------------------------|-------------------------------|-----|
-| choose the algorithm (`turncost = -10`)      | profile, fixed or by tags     | yes |
+| choose the algorithm (`turncost = -12`)      | profile, fixed or by tags     | yes |
 | parameters like `w`                          | profile, constant or by tags  | yes |
 | the value `c` itself                         | Java only                     | -   |
 | a profile expression using `c`               | -                             | no  |
@@ -262,5 +263,5 @@ anyway.
 | routing speed            | extra pass per link expansion   | no change                       |
 | map data                 | no change                       | new lookup value, maps rebuilt  |
 | new algorithm / tuning   | new app version                 | new maps                        |
-| profile control          | code per way (`-10`, ...)       | ordinary expression on the tag  |
+| profile control          | code per way (`-12`, ...)       | ordinary expression on the tag  |
 | curvature value usable in profile expressions | no (`c` applied in Java; the algorithm is selected by `turncost`) | yes (the tag is an ordinary lookup value) |

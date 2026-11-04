@@ -1,15 +1,16 @@
 # LinkCostModifier: hook in BRouter
 
-Implemented on branch `curvaturepr` (based on `master`, i.e. upstream `master`), five
-commits, PR to `asamm` first, then to upstream. Description of the PR:
+Implemented on branch `curvaturepr` (based on `master`, i.e. upstream `master`), six
+commits: five for the hook, one for the curvature behind it (`LinkCurvature`, code `-12`).
+The PR to `asamm` is open, upstream comes after it. Description of the PR:
 `pr-linkcostmodifier-asamm.md`.
 
 The runtime curvature has two parts with different owners:
 
 | part | what | where | state |
 |---|---|---|---|
-| **hook** (this document) | a small, generic hook in the engine: a link is handed over with its whole geometry, the hook returns a factor for its section costs | `brouter-core`, branch `curvaturepr` | implemented, with two constant implementations |
-| **curvature** | `c` from the window, M3 bands, serpentine rule, cap 0.9; factor `1 - c` | an implementation of the hook behind code `-10` | not written; algorithm in `runtime-curvature-window.md`, Kotlin port `jvm/src/main/kotlin/btools/router/LinkCurvature.kt` |
+| **hook** (this document) | a small, generic hook in the engine: a link is handed over with its whole geometry, the hook returns a factor for its section costs | `brouter-core`, branch `curvaturepr` | implemented, with two constant implementations (`-10`, `-11`) |
+| **curvature** | `c` from the window, M3 bands, serpentine rule, cap 0.9; factor `1 - c` | `LinkCurvature.java`, an implementation of the hook behind code `-12` | implemented (`3b54c7c3`); algorithm in `runtime-curvature-window.md`, Java port of the Kotlin study `jvm/src/main/kotlin/btools/router/LinkCurvature.kt` |
 
 The hook knows nothing about curvature. Any algorithm that wants to change the cost of a
 link from its shape can use it, which is the argument for the upstream PR. Background of
@@ -22,8 +23,9 @@ Line numbers refer to `brouter-core/src/main/java/btools/router/*.java` on `curv
 | `turncost` of the way | turn angle penalty | LinkCostModifier |
 |---|---|---|
 | `>= 0` | as before | none |
-| `-10` | off | factor 1, the cost does not change (the curvature goes here later) |
+| `-10` | off | factor 1, the cost does not change |
 | `-11` | off | factor 0.5, for tests |
+| `-12` | off | `LinkCurvature`: factor `1 - c`, curvy links get cheaper (road motorcycles) |
 | other negative | off | none |
 
 Profiles with a non-negative `turncost` get exactly the same costs as before (the section
@@ -39,6 +41,7 @@ cost is multiplied by `1.`). No profile in `misc/profiles2` on `master` uses a n
 | `22e0ceb7` Select a LinkCostModifier by the turncost code | new `ConstantLinkCostModifier.java`, `RoutingContext.java:231-247` |
 | `084a5298` Apply the LinkCostModifier to the section costs of a link | `OsmPath.java:199-202`, `:310-311` |
 | `d582d3c2` Test the LinkCostModifier selection by turncost | new `src/test/java/btools/router/LinkCostModifierTest.java` |
+| `3b54c7c3` Link curvature - implementation, comments | new `LinkCurvature.java`, `RoutingContext.java:234`, `:245-246`; in the test the code without a modifier moved from `-12` to `-13` |
 
 ## The code
 
@@ -79,12 +82,13 @@ public interface LinkCostModifier {
 }
 ```
 
-### Selection (`RoutingContext.java:231-247`)
+### Selection (`RoutingContext.java:231-250`)
 
 ```java
 // linkCostModifiers selected by a negative turncost of the way (see StdPath)
 private static final LinkCostModifier LINK_COST_NONE = new ConstantLinkCostModifier(1.);
 private static final LinkCostModifier LINK_COST_HALF = new ConstantLinkCostModifier(0.5); // for tests
+private static final LinkCostModifier LINK_COST_CURVATURE = new LinkCurvature();
 
 public static LinkCostModifier getLinkCostModifier(float turncost) {
   switch ((int) turncost) {
@@ -92,13 +96,16 @@ public static LinkCostModifier getLinkCostModifier(float turncost) {
       return LINK_COST_NONE;
     case -11:
       return LINK_COST_HALF;
+    case -12:
+      return LINK_COST_CURVATURE;
     default:
       return null;
   }
 }
 ```
 
-`ConstantLinkCostModifier` returns the same factor for every link.
+`ConstantLinkCostModifier` returns the same factor for every link, `LinkCurvature` the
+factor `1 - c` of the link (below).
 
 ### The hook (`OsmPath.java:196-202`, `:310-311`)
 
@@ -120,7 +127,7 @@ for (int nsection = 0; ; nsection++) {
 ## Contract
 
 - **Selection:** the `turncost` of the way is the code, so a profile can choose it per way
-  by tags (`if ismainroad then 90 else -10`). The expression cache is not a problem, the
+  by tags (`if ismainroad then 90 else -12`). The expression cache is not a problem, the
   code depends on tags only (`runtime-curvature-turncost.md`). A non-integer value is cut
   to an int (`-10.5` selects `-10`).
 - **Input:** the point before the link (`origin.originLon/Lat`, `-1` at the start of the
@@ -163,26 +170,31 @@ injected value belongs to the global context and is read only in the way context
 | turncost | cost | checks |
 |---|---|---|
 | 0 | 689 | reference |
-| -12 | 689 | a negative code without a modifier only switches the penalty off |
+| -13 | 689 | a negative code without a modifier only switches the penalty off |
 | -10 | 689 | factor 1 does not change the cost |
 | -11 | 331 | factor 0.5; 689 / 2 minus the int rounding of 43 sections |
 | 90 | 950 | a positive turncost still adds the penalty |
 
 All tests also check that the track (its distance) stays the same. Not tested directly:
 that initialcost is not discounted (`shortest.brf` has initialcost only on ferries).
+`LinkCurvature` (`-12`) has no unit test in the PR; it was verified by a temporary
+export (`runtime-curvature-window.md`, "Verification"). On the same track `-12` gives
+cost 594.
 
-## Our implementation behind it
+## The curvature behind it (`LinkCurvature.java`, code `-12`)
 
-The curvature becomes one more class and one more `case`:
+One more class and one more `case` (commit `3b54c7c3`):
 
 ```java
-case -10:
+case -12:
   return LINK_COST_CURVATURE;    // linkCostFactor() = 1 - c
 ```
 
-It computes `dist[]` and `angle[]` from the geometry itself and then runs `bands()` + M3
-+ serpentine rule of `LinkCurvature.kt`. Details: "Integration into the engine" in
-`runtime-curvature-window.md`.
+`-10` and `-11` stay the constant modifiers (decided 2026-10-30), so the test of the
+selection does not depend on the curvature algorithm. `LinkCurvature` computes `dist[]`
+and `angle[]` from the geometry itself and then runs `bands()`, the weighted mean of the
+band weights, the serpentine rule and the cap 0.9 (Java port of `LinkCurvature.kt`).
+Details and verification: "Integration into the engine" in `runtime-curvature-window.md`.
 
 ## Decisions (2026-10-29) and what was rejected
 
@@ -206,10 +218,12 @@ and at a waypoint in the middle of a link it measures the whole link.
 ## Open for the upstream PR
 
 - Aesthetic objections to expect: `turncost` overloaded with codes, a test implementation
-  (`-11`) in production code, a hook whose only production implementation (`-10`) does
-  nothing yet. The description should say what it is for (curvature for road
-  motorcyclists).
-- Upstream merges PRs as squash commits (since mid-2026): the five commits become one.
+  (`-11`) and a no-op implementation (`-10`) in production code next to the real one
+  (`-12`). The description should say what it is for (curvature for road motorcyclists).
+- The temporary export in `LinkCurvature.java` (every evaluated link to a GeoJSONSeq file,
+  marked `EXPORT (temporary)`) is switched off by `EXPORT_FILE = null`; remove it before
+  upstream.
+- Upstream merges PRs as squash commits (since mid-2026): the six commits become one.
   If `curvaturepr` is merged into `asamm` first, `asamm` gets the same change again as
   another commit at the next sync with `master`; identical changes merge cleanly, changes
   made in the upstream review may conflict in `OsmPath` / `RoutingContext`.

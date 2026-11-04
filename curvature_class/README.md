@@ -10,10 +10,10 @@ Nothing outside this directory is modified; the rest of the repository is only r
 
 | directory   | content |
 |-------------|---------|
-| `docs/`     | design notes: `metrics.md` (procedure), `sources.md` (background), `tables.md` (source tables of `brouter.sql`), `pgsql-import.md` (how to run the SQL part), `runtime-curvature-turncost.md` (variant: curvature at routing time selected by a negative turncost), `runtime-curvature-window.md` (the runtime algorithm and its results on real links), `link-cost-modifier-interface.md` (the hook in BRouter, implemented on branch `curvaturepr`), `pr-linkcostmodifier-asamm.md` (description of the PR `curvaturepr` -> `asamm`, ready to paste) |
+| `docs/`     | design notes: `metrics.md` (procedure), `sources.md` (background), `tables.md` (source tables of `brouter.sql`), `pgsql-import.md` (how to run the SQL part), `runtime-curvature-turncost.md` (variant: curvature at routing time selected by a negative turncost), `runtime-curvature-window.md` (the runtime algorithm and its results on real links), `link-cost-modifier-interface.md` (the hook in BRouter and its implementations on branch `curvaturepr`; the curvature is `LinkCurvature.java`, code `-12`), `pr-linkcostmodifier-asamm.md` (description of the PR `curvaturepr` -> `asamm`, ready to paste) |
 | `sql/`      | PostGIS part: `lines.sql` (table), `functions.sql` (`curv_*` functions), `curvature_tags.sql` (the tag) |
 | `python/`   | `generate_roads.py` (simulated roads), `visualize_curvature.py` (gallery with computed classes), `visualize_cost.py` (gallery with BRouter link cost from `RoadCostTest`), `analyze_real_links.py` (statistics of real links from the engine), `curvature_window.py` (runtime curvature prototype on real links) |
-| `jvm/`      | Kotlin tests running real BRouter code (turncost, section and link cost) |
+| `jvm/`      | Kotlin tests running real BRouter code (turncost, section and link cost); `LinkCurvature.kt`, the study the Java `LinkCurvature` was ported from |
 | `profiles/` | test `.brf` profiles, see `profiles/README.md` |
 | `upstream/` | verbatim copies of code from the repository, see `upstream/README.md` |
 | `out/`      | generated outputs (`roads.json`, `roads.svg`, `lines_data.sql`, ...); not in git |
